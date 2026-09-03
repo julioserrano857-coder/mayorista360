@@ -29,12 +29,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   onSuccessOrder
 }) => {
-  const { cart, settings, activePreventista, clearCart } = useStore();
+  const { cart, settings, activePreventista, clearCart, addOrder } = useStore();
 
+  const [clientName, setClientName] = useState('');
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
+  const [submittedCode, setSubmittedCode] = useState('');
+  const [submittedMessage, setSubmittedMessage] = useState('');
 
   if (!isOpen) return null;
 
@@ -42,16 +45,38 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const targetPhone = activePreventista?.whatsapp || settings.defaultWhatsApp;
   const targetName = activePreventista?.name || 'Central de Preventas';
 
-  // Build the clean WhatsApp message with only product names and quantities (plus optional note)
-  const orderMessage = buildWhatsAppOrderMessage({
+  // Preview message before submit
+  const previewMessage = buildWhatsAppOrderMessage({
     items: cart,
-    notes: notes.trim() || undefined
+    notes: notes.trim() || undefined,
+    orderCode: '----'
   });
 
   const handleSendOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const waLink = generateWhatsAppLink(targetPhone, orderMessage);
+    // 1. Guardar el pedido en el sistema / base de datos Supabase
+    const savedOrder = addOrder({
+      clientName: clientName.trim() || undefined,
+      notes: notes.trim() || undefined,
+      items: cart,
+      preventistaId: activePreventista?.id,
+      preventistaName: activePreventista?.name || 'Central Directa',
+      preventistaWhatsapp: targetPhone
+    });
+
+    setSubmittedCode(savedOrder.code);
+
+    // 2. Construir el mensaje prehecho de WhatsApp con el código de 4 dígitos
+    const finalOrderMessage = buildWhatsAppOrderMessage({
+      items: cart,
+      notes: notes.trim() || undefined,
+      orderCode: savedOrder.code
+    });
+
+    setSubmittedMessage(finalOrderMessage);
+
+    const waLink = generateWhatsAppLink(targetPhone, finalOrderMessage);
     setGeneratedLink(waLink);
     setIsSubmitted(true);
 
@@ -75,13 +100,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const handleCopyMessage = () => {
-    navigator.clipboard.writeText(orderMessage);
+    navigator.clipboard.writeText(submittedMessage || previewMessage);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleFinishAndClear = () => {
     clearCart();
+    setClientName('');
+    setNotes('');
     setIsSubmitted(false);
     onClose();
   };
@@ -131,10 +158,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             <div>
               <h4 className="text-lg font-extrabold text-slate-900">
-                ¡Pedido preparado con éxito!
+                ¡Pedido registrado con éxito!
               </h4>
               <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto">
                 Se abrió WhatsApp para enviar el pedido a <strong>{targetName}</strong> (+{targetPhone}).
+              </p>
+            </div>
+
+            {/* 4-digit code highlight box */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-4 text-center">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800 block mb-1">
+                Código de seguimiento asignado
+              </span>
+              <div className="text-3xl sm:text-4xl font-black font-mono tracking-widest text-emerald-700">
+                #{submittedCode}
+              </div>
+              <p className="text-[11px] text-emerald-800 font-medium mt-1">
+                Guarda este número para consultar tu pedido o informar al preventista
               </p>
             </div>
 
@@ -143,7 +183,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <strong className="block font-bold">Recordatorio:</strong>
-                Revisa la ventana de WhatsApp y presiona el botón de <strong>Enviar</strong> para que el preventista reciba el pedido completo.
+                Revisa la ventana de WhatsApp y presiona el botón de <strong>Enviar</strong> para que el preventista reciba el pedido con su código <strong>#{submittedCode}</strong>.
               </div>
             </div>
 
@@ -175,7 +215,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </div>
             </div>
 
-            {/* Option B Action Buttons */}
+            {/* Action Buttons */}
             <div className="pt-2 flex flex-col gap-2">
               <button
                 id="btn-confirm-order-sent-clear"
@@ -198,7 +238,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
           </div>
         ) : (
-          /* Fast WhatsApp Checkout without address forms */
+          /* Fast WhatsApp Checkout */
           <form onSubmit={handleSendOrder} className="p-4 sm:p-5 space-y-3.5">
             {/* Direct Preventista info indicator */}
             <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3 flex items-center justify-between text-xs">
@@ -226,7 +266,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <strong className="font-extrabold block text-amber-950">
                   Recordatorio para finalizar:
                 </strong>
-                Al tocar el botón verde, se abrirá WhatsApp con el mensaje de todos los productos. Recuerda presionar <strong>Enviar</strong> en WhatsApp para que le llegue a tu preventista.
+                Al presionar el botón verde, se registrará el pedido con un código de 4 dígitos y se abrirá WhatsApp con el mensaje armado.
               </div>
             </div>
 
@@ -257,6 +297,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </div>
             </div>
 
+            {/* Client / Business Name (Optional) */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                Tu nombre o Nombre de tu comercio (opcional)
+              </label>
+              <input
+                id="input-order-client-name"
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Ej: Pet Shop Huellitas / Juan Pérez"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-base sm:text-xs text-slate-900 focus:outline-none focus:border-emerald-600 transition-all placeholder:text-slate-400"
+              />
+            </div>
+
             {/* Campo opcional de Nota o Aclaración */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 mb-1">
@@ -282,7 +337,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <span className="text-[10px] text-emerald-700 font-semibold underline">Ver</span>
               </summary>
               <pre className="mt-2 p-2.5 bg-white rounded-lg border border-slate-200 text-[11px] font-mono text-slate-800 whitespace-pre-wrap leading-relaxed overflow-x-auto">
-                {orderMessage}
+                {previewMessage}
               </pre>
             </details>
 

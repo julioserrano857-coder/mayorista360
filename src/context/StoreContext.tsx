@@ -6,7 +6,10 @@ import {
   StoreSettings,
   AdminCredentials,
   CartItem,
-  ProductStatus
+  ProductStatus,
+  Order,
+  OrderStatus,
+  OrderItem
 } from '../types';
 import {
   INITIAL_CATEGORIES,
@@ -27,7 +30,9 @@ import {
   toDbPreventista,
   fromDbPreventista,
   toDbSettings,
-  fromDbSettings
+  fromDbSettings,
+  toDbOrder,
+  fromDbOrder
 } from '../lib/supabase';
 
 interface StoreContextType {
@@ -47,6 +52,22 @@ interface StoreContextType {
   updateCartQuantity: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
+
+  // Orders Management
+  orders: Order[];
+  addOrder: (orderData: {
+    clientName?: string;
+    notes?: string;
+    items: CartItem[];
+    preventistaId?: string;
+    preventistaName?: string;
+    preventistaWhatsapp?: string;
+    totalAmount?: number;
+    totalUnits?: number;
+  }) => Order;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  deleteOrder: (orderId: string) => void;
+  clearDeliveredOrders: () => void;
 
   // Product Management
   addProduct: (product: Omit<Product, 'id'>) => Product;
@@ -95,7 +116,8 @@ const STORAGE_KEYS = {
   ADMIN_AUTH: 'nutrimayorista_admin_auth_v1',
   ADMIN_SESSION: 'nutrimayorista_admin_session_v1',
   CART: 'nutrimayorista_cart_v1',
-  CART_TIMESTAMP: 'nutrimayorista_cart_timestamp_v1'
+  CART_TIMESTAMP: 'nutrimayorista_cart_timestamp_v1',
+  ORDERS: 'nutrimayorista_orders_v1'
 };
 
 // Carrito expira automáticamente tras 24 horas de inactividad
@@ -179,6 +201,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [activeRef, setActiveRef] = useState<string | null>(null);
 
   // Cloud synchronization status
@@ -225,6 +256,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [isAdminAuthenticated]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
     if (cart.length > 0) {
       localStorage.setItem(STORAGE_KEYS.CART_TIMESTAMP, String(Date.now()));
@@ -245,11 +280,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCloudStatusText('Sincronizando con Supabase...');
 
     try {
-      const [dbCats, dbProds, dbPrevs, dbSettings] = await Promise.all([
+      const [dbCats, dbProds, dbPrevs, dbSettings, dbOrders] = await Promise.all([
         supabaseClient.query('categories', { order: 'order.asc' }),
         supabaseClient.query('products'),
         supabaseClient.query('preventistas'),
-        supabaseClient.query('store_settings', { filter: 'id=eq.default_settings' })
+        supabaseClient.query('store_settings', { filter: 'id=eq.default_settings' }),
+        supabaseClient.query('orders', { order: 'created_at.desc' })
       ]);
 
       let hasCloudData = false;
@@ -271,6 +307,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (Array.isArray(dbSettings) && dbSettings.length > 0) {
         setSettings(fromDbSettings(dbSettings[0]));
+        hasCloudData = true;
+      }
+
+      if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+        setOrders(dbOrders.map(fromDbOrder));
         hasCloudData = true;
       }
 
@@ -305,18 +346,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const prodRows = products.map(toDbProduct);
       const prevRows = preventistas.map(toDbPreventista);
       const setRow = toDbSettings(settings);
+      const orderRows = orders.map(toDbOrder);
 
-      const [okCats, okProds, okPrevs, okSettings] = await Promise.all([
+      const [okCats, okProds, okPrevs, okSettings, okOrders] = await Promise.all([
         supabaseClient.upsert('categories', catRows),
         supabaseClient.upsert('products', prodRows),
         supabaseClient.upsert('preventistas', prevRows),
-        supabaseClient.upsert('store_settings', setRow)
+        supabaseClient.upsert('store_settings', setRow),
+        orderRows.length > 0 ? supabaseClient.upsert('orders', orderRows) : Promise.resolve(true)
       ]);
 
-      if (okCats && okProds && okPrevs && okSettings) {
+      if (okCats && okProds && okPrevs && okSettings && okOrders) {
         setIsCloudConnected(true);
-        setCloudStatusText('☁️ Catálogo subido y sincronizado con Supabase');
-        return { success: true, message: '¡Datos subidos y sincronizados correctamente en Supabase!' };
+        setCloudStatusText('☁️ Catálogo y pedidos sincronizados con Supabase');
+        return { success: true, message: '¡Datos y pedidos subidos y sincronizados correctamente en Supabase!' };
       } else {
         return {
           success: false,
@@ -360,7 +403,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       products,
       categories,
       preventistas,
-      settings
+      settings,
+      orders
     };
     return JSON.stringify(backup, null, 2);
   };
@@ -371,6 +415,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (Array.isArray(data.products)) setProducts(data.products);
       if (Array.isArray(data.categories)) setCategories(data.categories);
       if (Array.isArray(data.preventistas)) setPreventistas(data.preventistas);
+      if (Array.isArray(data.orders)) setOrders(data.orders);
       if (data.settings && typeof data.settings === 'object') setSettings(data.settings);
       return true;
     } catch {
@@ -742,6 +787,102 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsAdminAuthenticated(false);
   };
 
+  // Orders Methods (with Supabase sync & localStorage)
+  const addOrder = (orderData: {
+    clientName?: string;
+    notes?: string;
+    items: CartItem[];
+    preventistaId?: string;
+    preventistaName?: string;
+    preventistaWhatsapp?: string;
+    totalAmount?: number;
+    totalUnits?: number;
+  }): Order => {
+    // Generate unique 4-digit numeric code e.g. 4821
+    let code = Math.floor(1000 + Math.random() * 9000).toString();
+    const existingCodes = new Set(orders.filter((o) => o.status === 'Pendiente').map((o) => o.code));
+    let attempts = 0;
+    while (existingCodes.has(code) && attempts < 30) {
+      code = Math.floor(1000 + Math.random() * 9000).toString();
+      attempts++;
+    }
+
+    const orderItems: OrderItem[] = orderData.items.map((item) => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      weight: item.product.weight,
+      quantity: item.quantity,
+      unitPrice: item.product.price,
+      subtotal: item.product.price * item.quantity
+    }));
+
+    const calculatedTotal = orderItems.reduce((sum, it) => sum + it.subtotal, 0);
+    const calculatedUnits = orderItems.reduce((sum, it) => sum + it.quantity, 0);
+
+    const newOrder: Order = {
+      id: `ord-${Date.now()}-${code}`,
+      code,
+      createdAt: new Date().toISOString(),
+      preventistaId: orderData.preventistaId,
+      preventistaName: orderData.preventistaName || 'Central Directa',
+      preventistaWhatsapp: orderData.preventistaWhatsapp,
+      clientName: orderData.clientName?.trim() || undefined,
+      notes: orderData.notes?.trim() || undefined,
+      items: orderItems,
+      totalAmount: orderData.totalAmount ?? calculatedTotal,
+      totalUnits: orderData.totalUnits ?? calculatedUnits,
+      status: 'Pendiente'
+    };
+
+    setOrders((prev) => [newOrder, ...prev]);
+
+    if (isSupabaseConfigured()) {
+      supabaseClient.upsert('orders', toDbOrder(newOrder)).catch((err) => {
+        console.warn('[Supabase Insert Order]', err);
+      });
+    }
+
+    return newOrder;
+  };
+
+  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
+    let updatedObj: Order | null = null;
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === orderId) {
+          updatedObj = { ...o, status };
+          return updatedObj;
+        }
+        return o;
+      })
+    );
+
+    if (updatedObj && isSupabaseConfigured()) {
+      supabaseClient.upsert('orders', toDbOrder(updatedObj)).catch((err) => {
+        console.warn('[Supabase Update Order Status]', err);
+      });
+    }
+  };
+
+  const deleteOrder = (orderId: string) => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    if (isSupabaseConfigured()) {
+      supabaseClient.delete('orders', 'id', orderId).catch((err) => {
+        console.warn('[Supabase Delete Order]', err);
+      });
+    }
+  };
+
+  const clearDeliveredOrders = () => {
+    const deliveredIds = orders.filter((o) => o.status === 'Entregado').map((o) => o.id);
+    setOrders((prev) => prev.filter((o) => o.status !== 'Entregado'));
+    if (isSupabaseConfigured()) {
+      deliveredIds.forEach((id) => {
+        supabaseClient.delete('orders', 'id', id).catch(() => {});
+      });
+    }
+  };
+
   const resetAllDataToDefaults = () => {
     setProducts(INITIAL_PRODUCTS);
     setCategories(INITIAL_CATEGORIES);
@@ -767,6 +908,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateCartQuantity,
         removeFromCart,
         clearCart,
+        orders,
+        addOrder,
+        updateOrderStatus,
+        deleteOrder,
+        clearDeliveredOrders,
         addProduct,
         updateProduct,
         deleteProduct,

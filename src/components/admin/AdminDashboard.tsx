@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
+import { OrdersManagement } from './OrdersManagement';
 import { ProductManagement } from './ProductManagement';
 import { CategoryManagement } from './CategoryManagement';
 import { PreventistaManagement } from './PreventistaManagement';
 import { SettingsManagement } from './SettingsManagement';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import {
+  PackageCheck,
   Package,
   Layers,
   Users,
@@ -19,13 +21,22 @@ interface AdminDashboardProps {
   onGoToLanding?: () => void;
 }
 
-type AdminTab = 'products' | 'categories' | 'preventistas' | 'settings';
+type AdminTab = 'orders' | 'products' | 'categories' | 'preventistas' | 'settings';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding }) => {
-  const { logoutAdmin, settings, products, preventistas, categories } = useStore();
-  const [activeTab, setActiveTab] = useState<AdminTab>('products');
+  const { logoutAdmin, settings, products, preventistas, categories, orders } = useStore();
+  const [activeTab, setActiveTab] = useState<AdminTab>('orders');
 
-  const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; badge?: number }> = [
+  const pendingOrdersCount = orders.filter((o) => o.status === 'Pendiente').length;
+
+  const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; badge?: number; highlightBadge?: boolean }> = [
+    {
+      id: 'orders',
+      label: 'Pedidos Recibidos',
+      icon: <PackageCheck className="w-4 h-4" />,
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : orders.length,
+      highlightBadge: pendingOrdersCount > 0
+    },
     { id: 'products', label: 'Productos y Precios', icon: <Package className="w-4 h-4" />, badge: products.length },
     { id: 'categories', label: 'Categorías', icon: <Layers className="w-4 h-4" />, badge: categories.length },
     { id: 'preventistas', label: 'Preventistas y Links', icon: <Users className="w-4 h-4" />, badge: preventistas.length },
@@ -98,10 +109,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding })
                 >
                   {tab.icon}
                   <span>{tab.label}</span>
-                  {tab.badge !== undefined && (
+                  {tab.badge !== undefined && tab.badge > 0 && (
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        isActive
+                        tab.highlightBadge
+                          ? 'bg-amber-500 text-amber-950 font-black animate-pulse'
+                          : isActive
                           ? 'bg-slate-900 text-white'
                           : 'bg-slate-800 text-slate-400'
                       }`}
@@ -118,6 +131,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding })
 
       {/* Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {activeTab === 'orders' && <OrdersManagement />}
         {activeTab === 'products' && <ProductManagement />}
         {activeTab === 'categories' && <CategoryManagement />}
         {activeTab === 'preventistas' && <PreventistaManagement />}

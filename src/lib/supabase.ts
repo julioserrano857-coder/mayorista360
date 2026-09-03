@@ -2,7 +2,7 @@
 // Soporta tanto variables de entorno (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
 // como configuración manual desde el panel de administración con fallback en localStorage.
 
-import { Product, Category, Preventista, StoreSettings } from '../types';
+import { Product, Category, Preventista, StoreSettings, Order } from '../types';
 
 const STORAGE_SUPABASE_URL = 'nutrimayorista_supabase_url';
 const STORAGE_SUPABASE_KEY = 'nutrimayorista_supabase_anon_key';
@@ -134,6 +134,36 @@ export const fromDbSettings = (row: any): StoreSettings => ({
   currencySymbol: String(row.currency_symbol || '$'),
   announcement: row.announcement ? String(row.announcement) : undefined,
   minOrderAmount: Number(row.min_order_amount) || 0
+});
+
+export const toDbOrder = (o: Order) => ({
+  id: o.id,
+  code: o.code,
+  created_at: o.createdAt,
+  preventista_id: o.preventistaId || null,
+  preventista_name: o.preventistaName || 'Central Directa',
+  preventista_whatsapp: o.preventistaWhatsapp || null,
+  client_name: o.clientName || null,
+  notes: o.notes || null,
+  items: o.items || [],
+  total_amount: o.totalAmount,
+  total_units: o.totalUnits,
+  status: o.status || 'Pendiente'
+});
+
+export const fromDbOrder = (row: any): Order => ({
+  id: String(row.id),
+  code: String(row.code || ''),
+  createdAt: String(row.created_at || new Date().toISOString()),
+  preventistaId: row.preventista_id ? String(row.preventista_id) : undefined,
+  preventistaName: String(row.preventista_name || 'Central Directa'),
+  preventistaWhatsapp: row.preventista_whatsapp ? String(row.preventista_whatsapp) : undefined,
+  clientName: row.client_name ? String(row.client_name) : undefined,
+  notes: row.notes ? String(row.notes) : undefined,
+  items: Array.isArray(row.items) ? row.items : [],
+  totalAmount: Number(row.total_amount) || 0,
+  totalUnits: Number(row.total_units) || 0,
+  status: (row.status as any) || 'Pendiente'
 });
 
 // Cliente REST ligero

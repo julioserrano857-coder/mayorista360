@@ -59,6 +59,22 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 5. TABLA: PEDIDOS (orders)
+CREATE TABLE IF NOT EXISTS public.orders (
+    id TEXT PRIMARY KEY,
+    code VARCHAR(10) NOT NULL, -- ej: '4821'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    preventista_id TEXT,
+    preventista_name VARCHAR(150) NOT NULL DEFAULT 'Central Directa',
+    preventista_whatsapp VARCHAR(50),
+    client_name VARCHAR(150),
+    notes TEXT,
+    items JSONB NOT NULL DEFAULT '[]'::jsonb,
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    total_units INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pendiente' -- 'Pendiente', 'Entregado', 'Cancelado'
+);
+
 -- ==============================================================================
 -- ÍNDICES PARA BÚSQUEDA RÁPIDA (Optimizados para catálogos con miles de productos)
 -- ==============================================================================
@@ -66,6 +82,9 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category_id)
 CREATE INDEX IF NOT EXISTS idx_products_status ON public.products(status);
 CREATE INDEX IF NOT EXISTS idx_products_name ON public.products(name);
 CREATE INDEX IF NOT EXISTS idx_preventistas_slug ON public.preventistas(slug);
+CREATE INDEX IF NOT EXISTS idx_orders_code ON public.orders(code);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at DESC);
 
 -- ==============================================================================
 -- POLÍTICAS DE SEGURIDAD (Row Level Security - RLS)
@@ -75,15 +94,18 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.preventistas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
 -- Políticas de LECTURA PÚBLICA (para que el catálogo cargue instantáneamente)
 CREATE POLICY "Lectura pública de categorías" ON public.categories FOR SELECT USING (true);
 CREATE POLICY "Lectura pública de productos" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Lectura pública de preventistas" ON public.preventistas FOR SELECT USING (true);
 CREATE POLICY "Lectura pública de configuración" ON public.store_settings FOR SELECT USING (true);
+CREATE POLICY "Lectura pública de pedidos" ON public.orders FOR SELECT USING (true);
 
 -- Políticas de ESCRITURA (insert, update, delete permitidas para el admin / anon con clave de tu app)
 CREATE POLICY "Gestión total de categorías" ON public.categories FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Gestión total de productos" ON public.products FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Gestión total de preventistas" ON public.preventistas FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Gestión total de configuración" ON public.store_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Gestión total de pedidos" ON public.orders FOR ALL USING (true) WITH CHECK (true);
