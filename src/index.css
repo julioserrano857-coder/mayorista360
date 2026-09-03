@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Hide scrollbars while preserving touch scrolling */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Optimize touch responsiveness and eliminate 300ms tap delay */
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Safe area padding for mobile notches / navigation bars */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+}

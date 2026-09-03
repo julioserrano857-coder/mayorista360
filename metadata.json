@@ -1,0 +1,6 @@
+{
+  "name": "Catálogo Mayorista de Mascotas",
+  "description": "Catálogo digital de productos y alimentos para mascotas con pedidos mayoristas directos a preventistas por WhatsApp y panel de administración.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
