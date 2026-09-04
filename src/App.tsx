@@ -66,7 +66,6 @@ function MainApp() {
   // Client Catalog Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
-  const [selectedSpecies, setSelectedSpecies] = useState<Species | 'Todos'>('Todos');
   const [stockFilterOnly, setStockFilterOnly] = useState(false);
 
   // View Mode: 'grid' (2-column on mobile, 3-4 on PC) | 'list' (compact rapid wholesale rows)
@@ -84,10 +83,19 @@ function MainApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [viewMode]);
 
+  // Dynamic Document Title based on Company Name & Preventista
+  useEffect(() => {
+    if (activePreventista) {
+      document.title = `${settings.companyName} | Preventista ${activePreventista.name}`;
+    } else {
+      document.title = `${settings.companyName} | Catálogo Mayorista`;
+    }
+  }, [settings.companyName, activePreventista]);
+
   // Reset visibleCount on filter or search change to keep DOM render instantaneous
   useEffect(() => {
     setVisibleCount(24);
-  }, [searchTerm, selectedCategoryId, selectedSpecies, stockFilterOnly]);
+  }, [searchTerm, selectedCategoryId, stockFilterOnly]);
 
   // Filtered Products Logic
   const filteredProducts = useMemo(() => {
@@ -105,16 +113,12 @@ function MainApp() {
       const matchesCategory =
         selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
 
-      // Species filter
-      const matchesSpecies =
-        selectedSpecies === 'Todos' || product.species === selectedSpecies;
-
       // Stock filter
       const matchesStock = !stockFilterOnly || product.status === 'Disponible';
 
-      return matchesSearch && matchesCategory && matchesSpecies && matchesStock;
+      return matchesSearch && matchesCategory && matchesStock;
     });
-  }, [products, searchTerm, selectedCategoryId, selectedSpecies, stockFilterOnly]);
+  }, [products, searchTerm, selectedCategoryId, stockFilterOnly]);
 
   // Slice for progressive rendering
   const visibleProducts = useMemo(() => {
@@ -165,8 +169,6 @@ function MainApp() {
       <Header
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        selectedSpecies={selectedSpecies}
-        onSpeciesChange={setSelectedSpecies}
         onOpenCart={() => setIsCartOpen(true)}
         stockFilterOnly={stockFilterOnly}
         onToggleStockFilter={() => setStockFilterOnly(!stockFilterOnly)}
@@ -176,142 +178,180 @@ function MainApp() {
       <PreventistaBanner />
 
       {/* 3. Category Filter Scrollbar */}
-      <CategoryBar
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
-      />
+      {categories.length > 0 && (
+        <CategoryBar
+          selectedCategoryId={selectedCategoryId}
+          onSelectCategory={setSelectedCategoryId}
+        />
+      )}
 
       {/* 4. Main Catalog Content */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 ${cartCount > 0 ? 'pb-24 sm:pb-8' : ''}`}>
-        {/* Results summary bar with View Switcher */}
-        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2.5 mb-4 sm:mb-6">
-          <div className="text-xs text-slate-600">
-            Mostrando <strong>{Math.min(visibleCount, filteredProducts.length)}</strong> de{' '}
-            <strong>{filteredProducts.length}</strong> productos
-            {searchTerm && <span> para "{searchTerm}"</span>}
-            {(searchTerm || selectedCategoryId !== 'all' || selectedSpecies !== 'Todos' || stockFilterOnly) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategoryId('all');
-                  setSelectedSpecies('Todos');
-                  setStockFilterOnly(false);
-                }}
-                className="ml-2 text-sky-600 hover:text-sky-700 font-bold hover:underline cursor-pointer touch-action-manipulation"
+        {products.length === 0 ? (
+          /* Blank Catalog State: No products uploaded yet */
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-14 text-center max-w-lg mx-auto my-12 shadow-xs">
+            <div className="w-16 h-16 bg-sky-50 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-2xs">
+              📦
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900 mb-2">
+              Catálogo en Preparación
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mb-6 leading-relaxed">
+              Aún no se han publicado artículos en este catálogo. Muy pronto encontrarás aquí todos los productos disponibles para realizar tus pedidos directamente por WhatsApp.
+            </p>
+            {activePreventista ? (
+              <a
+                href={`https://wa.me/${activePreventista.whatsapp}?text=${encodeURIComponent('Hola ' + activePreventista.name + ', quisiera consultar sobre la lista de precios y productos.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-xs transition-transform active:scale-95"
               >
-                Limpiar filtros
-              </button>
-            )}
+                <Phone className="w-4 h-4" />
+                <span>Consultar con Preventista</span>
+              </a>
+            ) : settings.defaultWhatsApp ? (
+              <a
+                href={`https://wa.me/${settings.defaultWhatsApp}?text=${encodeURIComponent('Hola, quisiera consultar sobre la lista de precios mayorista.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-xs transition-transform active:scale-95"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Consultar por WhatsApp</span>
+              </a>
+            ) : null}
           </div>
-
-          {/* View mode toggle (Cuadrícula 2-col vs Lista Rápida) */}
-          <div className="flex items-center gap-1 self-start xs:self-auto bg-slate-200/80 p-1 rounded-xl border border-slate-200">
-            <button
-              id="btn-view-grid"
-              type="button"
-              onClick={() => setLayoutMode('grid')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all touch-action-manipulation cursor-pointer ${
-                layoutMode === 'grid'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Vista en cuadrícula (2 columnas en celular)"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Cuadrícula</span>
-            </button>
-            <button
-              id="btn-view-list"
-              type="button"
-              onClick={() => setLayoutMode('list')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all touch-action-manipulation cursor-pointer ${
-                layoutMode === 'list'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Vista en lista rápida (pedidos exprés)"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>Lista Rápida</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Products Render (Grid or List) */}
-        {filteredProducts.length > 0 ? (
+        ) : (
           <>
-            {layoutMode === 'grid' ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-                {visibleProducts.map((product) => {
-                  const category = categories.find((c) => c.id === product.categoryId);
-                  return (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      category={category}
-                      layoutMode="grid"
-                      onQuickView={(p) => setQuickViewProduct(p)}
-                    />
-                  );
-                })}
+            {/* Results summary bar with View Switcher */}
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2.5 mb-4 sm:mb-6">
+              <div className="text-xs text-slate-600">
+                Mostrando <strong>{Math.min(visibleCount, filteredProducts.length)}</strong> de{' '}
+                <strong>{filteredProducts.length}</strong> productos
+                {searchTerm && <span> para "{searchTerm}"</span>}
+                {(searchTerm || selectedCategoryId !== 'all' || stockFilterOnly) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategoryId('all');
+                      setStockFilterOnly(false);
+                    }}
+                    className="ml-2 text-sky-600 hover:text-sky-700 font-bold hover:underline cursor-pointer touch-action-manipulation"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className="space-y-2.5">
-                {visibleProducts.map((product) => {
-                  const category = categories.find((c) => c.id === product.categoryId);
-                  return (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      category={category}
-                      layoutMode="list"
-                      onQuickView={(p) => setQuickViewProduct(p)}
-                    />
-                  );
-                })}
-              </div>
-            )}
 
-            {/* Load More Button for Progressive Speed */}
-            {filteredProducts.length > visibleCount && (
-              <div className="mt-8 text-center">
+              {/* View mode toggle (Cuadrícula 2-col vs Lista Rápida) */}
+              <div className="flex items-center gap-1 self-start xs:self-auto bg-slate-200/80 p-1 rounded-xl border border-slate-200">
                 <button
-                  id="btn-load-more-products"
+                  id="btn-view-grid"
                   type="button"
-                  onClick={() => setVisibleCount((prev) => prev + 24)}
-                  className="px-6 py-3 rounded-2xl bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs sm:text-sm font-extrabold shadow-sm hover:shadow transition-all touch-action-manipulation active:scale-95 cursor-pointer"
+                  onClick={() => setLayoutMode('grid')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all touch-action-manipulation cursor-pointer ${
+                    layoutMode === 'grid'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Vista en cuadrícula (2 columnas en celular)"
                 >
-                  Cargar más productos ({filteredProducts.length - visibleCount} restantes)
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Cuadrícula</span>
+                </button>
+                <button
+                  id="btn-view-list"
+                  type="button"
+                  onClick={() => setLayoutMode('list')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all touch-action-manipulation cursor-pointer ${
+                    layoutMode === 'list'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Vista en lista rápida (pedidos exprés)"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>Lista Rápida</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Products Render (Grid or List) */}
+            {filteredProducts.length > 0 ? (
+              <>
+                {layoutMode === 'grid' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
+                    {visibleProducts.map((product) => {
+                      const category = categories.find((c) => c.id === product.categoryId);
+                      return (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          category={category}
+                          layoutMode="grid"
+                          onQuickView={(p) => setQuickViewProduct(p)}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {visibleProducts.map((product) => {
+                      const category = categories.find((c) => c.id === product.categoryId);
+                      return (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          category={category}
+                          layoutMode="list"
+                          onQuickView={(p) => setQuickViewProduct(p)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Load More Button for Progressive Speed */}
+                {filteredProducts.length > visibleCount && (
+                  <div className="mt-8 text-center">
+                    <button
+                      id="btn-load-more-products"
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + 24)}
+                      className="px-6 py-3 rounded-2xl bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs sm:text-sm font-extrabold shadow-sm hover:shadow transition-all touch-action-manipulation active:scale-95 cursor-pointer"
+                    >
+                      Cargar más productos ({filteredProducts.length - visibleCount} restantes)
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Empty Search or Filter State */
+              <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center max-w-md mx-auto my-12 shadow-xs">
+                <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                  <Search className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800 mb-1">
+                  No encontramos productos coincidentes
+                </h3>
+                <p className="text-xs text-slate-500 mb-6">
+                  Prueba cambiando los términos de búsqueda o limpiando los filtros seleccionados.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategoryId('all');
+                    setStockFilterOnly(false);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs touch-action-manipulation cursor-pointer"
+                >
+                  Ver todos los productos
                 </button>
               </div>
             )}
           </>
-        ) : (
-          /* Empty Search or Filter State */
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center max-w-md mx-auto my-12 shadow-xs">
-            <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-              <Search className="w-7 h-7" />
-            </div>
-            <h3 className="text-base font-bold text-slate-800 mb-1">
-              No encontramos productos coincidentes
-            </h3>
-            <p className="text-xs text-slate-500 mb-6">
-              Prueba cambiando los términos de búsqueda o limpiando los filtros seleccionados.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategoryId('all');
-                setSelectedSpecies('Todos');
-                setStockFilterOnly(false);
-              }}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs touch-action-manipulation cursor-pointer"
-            >
-              Ver todos los productos
-            </button>
-          </div>
         )}
       </main>
 
@@ -348,13 +388,13 @@ function MainApp() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2.5 mb-2">
-              <span className="text-2xl">🐾</span>
+              <span className="text-2xl">📦</span>
               <span className="font-extrabold text-base text-slate-900">
                 {settings.companyName}
               </span>
             </div>
             <p className="text-slate-500 leading-relaxed max-w-sm">
-              Distribución mayorista directa de alimentos, medicamentos, snacks y accesorios para mascotas. Venta exclusiva a pet shops, veterinarias y forrajerías.
+              Distribución mayorista multirrubro directa: alimentos para mascotas, cigarrillos, golosinas, bebidas, snacks y artículos para kioscos, veterinarias y comercios.
             </p>
           </div>
 
@@ -383,15 +423,15 @@ function MainApp() {
             <div className="space-y-2 text-slate-500 text-xs">
               <div className="flex items-center gap-2">
                 <Truck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Envíos directos y programados a veterinarias y pet shops</span>
+                <span>Envíos y repartos directos a comercios y revendedores</span>
               </div>
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-sky-600 shrink-0" />
-                <span>Venta exclusiva a comercios por bulto cerrado</span>
+                <span>Venta por bulto cerrado, cartón o display cerrado</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>Confirmación y procesamiento directo por WhatsApp</span>
+                <span>Confirmación y envío directo de pedido por WhatsApp</span>
               </div>
             </div>
           </div>

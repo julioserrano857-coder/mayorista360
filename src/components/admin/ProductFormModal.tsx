@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Product, Species, ProductStatus } from '../../types';
+import { Product, ProductStatus } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import {
   X,
   Save,
   Image,
-  Tag,
   DollarSign,
   Package,
   Layers,
-  Sparkles,
   UploadCloud,
   Camera,
   Trash2,
-  RefreshCw,
   CheckCircle2,
   AlertCircle,
   Link as LinkIcon,
-  Loader2
+  Loader2,
+  Plus
 } from 'lucide-react';
 import { processImageFile } from '../../utils/imageCompressor';
 
@@ -27,15 +25,18 @@ interface ProductFormModalProps {
   productToEdit?: Product | null;
 }
 
-const SAMPLE_PET_IMAGES = [
-  { label: 'Bolsa Alimento Perro', url: 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Croquetas & Bowl', url: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Alimento Gato Premium', url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Pouch / Sobre Húmedo', url: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Snacks & Premios', url: 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Medicamento / Pipeta', url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Piedras Sanitarias', url: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=600&auto=format&fit=crop&q=80' },
-  { label: 'Aves y Semillas', url: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=600&auto=format&fit=crop&q=80' }
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&auto=format&fit=crop&q=80';
+
+const SUGGESTED_PRESENTATIONS = [
+  'Unidad',
+  'Pack x 6',
+  'Pack x 12',
+  'Caja x 24',
+  'Display x 20',
+  'Cartón x 10',
+  'Bolsa 15 kg',
+  'Bolsa 21 kg',
+  'Fardo x 6'
 ];
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -43,18 +44,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onClose,
   productToEdit
 }) => {
-  const { categories, addProduct, updateProduct } = useStore();
+  const { categories, addProduct, updateProduct, addCategory } = useStore();
 
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [species, setSpecies] = useState<Species>('Perro');
-  const [weight, setWeight] = useState('15 kg');
-  const [price, setPrice] = useState<number | string>(50000);
+  const [weight, setWeight] = useState('Unidad');
+  const [price, setPrice] = useState<number | string>(1000);
   const [status, setStatus] = useState<ProductStatus>('Disponible');
   const [imageUrl, setImageUrl] = useState('');
   const [brand, setBrand] = useState('');
   const [description, setDescription] = useState('');
   const [sku, setSku] = useState('');
+
+  // Quick inline category creation if needed
+  const [isCreatingQuickCat, setIsCreatingQuickCat] = useState(false);
+  const [quickCatName, setQuickCatName] = useState('');
 
   // Upload States
   const [isUploading, setIsUploading] = useState(false);
@@ -67,15 +71,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setUploadError(null);
     setIsUploading(false);
     setIsDragging(false);
+    setIsCreatingQuickCat(false);
+    setQuickCatName('');
 
     if (productToEdit) {
       setName(productToEdit.name);
       setCategoryId(productToEdit.categoryId);
-      setSpecies(productToEdit.species);
-      setWeight(productToEdit.weight);
+      setWeight(productToEdit.weight || 'Unidad');
       setPrice(productToEdit.price);
       setStatus(productToEdit.status);
-      setImageUrl(productToEdit.imageUrl);
+      setImageUrl(productToEdit.imageUrl || '');
       setBrand(productToEdit.brand || '');
       setDescription(productToEdit.description || '');
       setSku(productToEdit.sku || '');
@@ -83,9 +88,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     } else {
       setName('');
       setCategoryId(categories[0]?.id || '');
-      setSpecies('Perro');
-      setWeight('15 kg');
-      setPrice(50000);
+      setWeight('Unidad');
+      setPrice(1000);
       setStatus('Disponible');
       setImageUrl('');
       setBrand('');
@@ -94,6 +98,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setShowAdvancedUrl(false);
     }
   }, [productToEdit, categories, isOpen]);
+
+  // Handle Quick Category Create
+  const handleCreateQuickCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickCatName.trim()) return;
+    const newCat = addCategory({
+      name: quickCatName.trim(),
+      order: categories.length + 1,
+      active: true
+    });
+    setCategoryId(newCat.id);
+    setQuickCatName('');
+    setIsCreatingQuickCat(false);
+  };
 
   // Image Upload File Processing
   const handleFiles = async (files: FileList | null) => {
@@ -108,22 +126,15 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     try {
       setIsUploading(true);
       setUploadError(null);
-      const optimizedDataUrl = await processImageFile(file, 1000, 0.82);
-      setImageUrl(optimizedDataUrl);
-    } catch (err) {
-      console.error('Error optimizando imagen:', err);
-      setUploadError('Ocurrió un error al procesar la imagen seleccionada. Por favor intente con otra.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
+      const compressedDataUrl = await processImageFile(file, 800, 0.85);
+
+      setImageUrl(compressedDataUrl);
+      setIsUploading(false);
+    } catch (err: any) {
+      console.error('[Image Upload Error]', err);
+      setUploadError(err?.message || 'Error al procesar la imagen seleccionada.');
+      setIsUploading(false);
     }
   };
 
@@ -139,22 +150,35 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setIsDragging(false);
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !categoryId) return;
+    if (!name.trim()) return;
 
-    const parsedPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
+    if (!categoryId && categories.length > 0) {
+      setCategoryId(categories[0].id);
+    }
+
+    const finalPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(finalPrice) || finalPrice < 0) return;
 
     const payload = {
       name: name.trim(),
-      categoryId,
-      species,
-      weight: weight.trim() || '15 kg',
-      price: Math.max(0, parsedPrice),
+      categoryId: categoryId || (categories[0]?.id ?? 'cat-default'),
+      weight: weight.trim() || 'Unidad',
+      price: finalPrice,
       status,
-      imageUrl: imageUrl.trim() || SAMPLE_PET_IMAGES[0].url,
+      imageUrl: imageUrl.trim() || DEFAULT_IMAGE,
       brand: brand.trim() || undefined,
       description: description.trim() || undefined,
       sku: sku.trim() || undefined
@@ -184,7 +208,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {productToEdit ? 'Editar Producto' : 'Crear Nuevo Producto'}
             </h3>
             <p className="text-xs text-slate-400">
-              Complete los datos mayoristas para el catálogo digital
+              Completa los datos del artículo para el catálogo de pedidos mayorista
             </p>
           </div>
           <button
@@ -197,6 +221,47 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* Notice if no categories exist */}
+          {categories.length === 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
+              <div className="font-bold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>No tienes categorías creadas todavía</span>
+              </div>
+              <p className="text-amber-800">
+                Puedes escribir el nombre de una categoría abajo para crearla automáticamente y asignársela a este producto.
+              </p>
+              {!isCreatingQuickCat ? (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingQuickCat(true)}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs inline-flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Crear Categoría Ahora</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={quickCatName}
+                    onChange={(e) => setQuickCatName(e.target.value)}
+                    placeholder="Ej: Bebidas, Golosinas, Alimentos..."
+                    className="px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickCategory}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs"
+                  >
+                    Guardar Categoría
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Row 1: Name and Brand */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
@@ -209,65 +274,92 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ej: Royal Canin Maxi Adult"
+                placeholder="Ej: Coca Cola 1.5L, Arroz 1kg, Marlboro 20, etc."
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Marca / Fabricante
+                Marca / Fabricante (Opcional)
               </label>
               <input
                 id="form-product-brand"
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="Ej: Royal Canin"
+                placeholder="Ej: Arcor, Coca Cola, etc."
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
-          {/* Row 2: Category, Species, Variant/Weight */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Row 2: Category and Presentation */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Categoría Asignada <span className="text-rose-500">*</span>
-              </label>
-              <select
-                id="form-product-category"
-                required
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:border-emerald-500"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Categoría en Catálogo <span className="text-rose-500">*</span>
+                </label>
+                {!isCreatingQuickCat && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingQuickCat(true)}
+                    className="text-[11px] text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Nueva</span>
+                  </button>
+                )}
+              </div>
+
+              {isCreatingQuickCat ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={quickCatName}
+                    onChange={(e) => setQuickCatName(e.target.value)}
+                    placeholder="Nombre nueva categoría..."
+                    className="w-full px-3 py-2 rounded-xl border border-emerald-500 text-xs font-bold focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickCategory}
+                    className="px-2.5 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shrink-0"
+                  >
+                    OK
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingQuickCat(false)}
+                    className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <select
+                  id="form-product-category"
+                  required
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:border-emerald-500 font-medium"
+                >
+                  {categories.length === 0 && (
+                    <option value="">Sin categorías creadas</option>
+                  )}
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Especie <span className="text-rose-500">*</span>
-              </label>
-              <select
-                id="form-product-species"
-                value={species}
-                onChange={(e) => setSpecies(e.target.value as Species)}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="Perro">🐶 Perro</option>
-                <option value="Gato">🐱 Gato</option>
-                <option value="Otros">🐾 Otros</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Variante / Peso <span className="text-rose-500">*</span>
+                Presentación / Unidad / Bulto <span className="text-rose-500">*</span>
               </label>
               <input
                 id="form-product-weight"
@@ -275,13 +367,25 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 required
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                placeholder="Ej: 15 kg, 3 kg, Pack x 12"
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                placeholder="Ej: Unidad, Pack x 6, Caja x 24, Bulto..."
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
               />
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {SUGGESTED_PRESENTATIONS.slice(0, 5).map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => setWeight(w)}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Row 3: Price, Status, SKU */}
+          {/* Row 3: Price, Stock, SKU */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -291,7 +395,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 id="form-product-price"
                 type="number"
                 min="0"
-                step="1"
+                step="any"
                 required
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -316,25 +420,25 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Código SKU (Opcional)
+                Código SKU / Ref (Opcional)
               </label>
               <input
                 id="form-product-sku"
                 type="text"
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                placeholder="RC-MAX-15"
+                placeholder="Ej: ART-001"
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
-          {/* Row 4: Product Image Upload (File picker + Drag & Drop) */}
+          {/* Row 4: Product Image Upload */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-emerald-600" />
-                <span>Foto del Producto <span className="text-rose-500">*</span></span>
+                <span>Foto del Producto</span>
               </span>
               {imageUrl && (
                 <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
@@ -361,165 +465,129 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     alt="Foto del producto"
                     className="w-full h-full object-contain p-1.5"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = SAMPLE_PET_IMAGES[0].url;
+                      (e.target as HTMLImageElement).src = DEFAULT_IMAGE;
                     }}
                   />
                 </div>
 
-                <div className="flex-1 w-full space-y-2">
-                  <div className="text-xs">
-                    <p className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      Foto cargada para el producto
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Optimizada para catálogo rápido y pedidos por WhatsApp.
-                    </p>
+                <div className="flex-1 w-full flex flex-col justify-between gap-2 text-center sm:text-left">
+                  <div className="text-xs text-slate-600">
+                    <span className="font-semibold text-slate-900 block truncate">
+                      {name || 'Producto'}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Imagen cargada y optimizada para el catálogo
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-300 shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all active:scale-95"
                     >
-                      {isUploading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
-                      ) : (
-                        <RefreshCw className="w-3.5 h-3.5 text-slate-600" />
-                      )}
+                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Cambiar Foto</span>
                     </button>
-
                     <button
                       type="button"
                       onClick={() => setImageUrl('')}
-                      disabled={isUploading}
-                      className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Quitar Foto</span>
+                      <span>Quitar</span>
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              /* When no image: Drag & Drop upload zone */
+              /* Empty Dropzone with Drag & Drop and Camera */
               <div
-                onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all ${
                   isDragging
-                    ? 'border-emerald-500 bg-emerald-50/70 scale-[1.01]'
-                    : 'border-slate-300 bg-slate-50 hover:bg-slate-100/80 hover:border-slate-400'
+                    ? 'border-emerald-500 bg-emerald-50/50 scale-[1.01]'
+                    : 'border-slate-300 hover:border-emerald-500 hover:bg-slate-50'
                 }`}
               >
-                <div className="flex flex-col items-center justify-center space-y-2.5">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform ${
-                    isDragging ? 'bg-emerald-100 text-emerald-700 scale-110' : 'bg-slate-200/80 text-slate-600'
-                  }`}>
-                    {isUploading ? (
-                      <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                    ) : (
-                      <UploadCloud className="w-6 h-6" />
-                    )}
+                {isUploading ? (
+                  <div className="py-4 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                    <span className="text-xs font-bold text-slate-700">
+                      Comprimiendo y optimizando foto...
+                    </span>
                   </div>
-
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">
-                      {isUploading
-                        ? 'Optimizando foto...'
-                        : 'Haz clic para subir la foto o arrástrala aquí'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Sube fotos desde tu computadora o la galería/cámara de tu celular (JPG, PNG, WebP)
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-1.5">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                    <div className="text-xs font-bold text-slate-800">
+                      Sube o toma una foto del producto
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Arrastra una imagen aquí o haz clic para abrir la galería / cámara
                     </p>
                   </div>
-
-                  <button
-                    type="button"
-                    className="mt-1 px-4 py-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs hover:bg-slate-800 transition-all pointer-events-none"
-                  >
-                    Seleccionar Foto
-                  </button>
-                </div>
+                )}
               </div>
             )}
 
             {uploadError && (
-              <div className="mt-2 text-xs text-rose-600 font-semibold flex items-center gap-1.5 bg-rose-50 p-2 rounded-xl border border-rose-200">
+              <div className="mt-2 text-xs text-rose-600 flex items-center gap-1.5 bg-rose-50 p-2 rounded-xl border border-rose-200">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{uploadError}</span>
               </div>
             )}
 
-            {/* Optional Collapsible URL / Presets alternative */}
-            <div className="mt-2 pt-2 border-t border-slate-100 flex flex-col gap-2">
+            {/* Optional URL Toggle */}
+            <div className="mt-1.5 text-right">
               <button
                 type="button"
                 onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
-                className="text-[11px] text-slate-500 hover:text-slate-800 font-medium self-start flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-[11px] text-slate-400 hover:text-slate-600 inline-flex items-center gap-1"
               >
-                <LinkIcon className="w-3 h-3 text-slate-400" />
-                <span>{showAdvancedUrl ? 'Ocultar opciones alternativas' : '¿Deseas usar una foto de muestra o enlace URL?'}</span>
+                <LinkIcon className="w-3 h-3" />
+                <span>{showAdvancedUrl ? 'Ocultar URL' : 'O pegar link web de imagen'}</span>
               </button>
-
-              {showAdvancedUrl && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <label className="block text-[11px] font-semibold text-slate-600">
-                    O ingresar enlace directo (opcional):
-                  </label>
-                  <input
-                    id="form-product-image-url"
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-500"
-                  />
-
-                  <div>
-                    <span className="text-[11px] font-semibold text-slate-500 block mb-1">
-                      Fotos predeterminadas para pet shop:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SAMPLE_PET_IMAGES.map((img, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setImageUrl(img.url)}
-                          className="text-[11px] px-2 py-0.5 rounded-md bg-white hover:bg-slate-200 text-slate-700 font-medium transition-colors border border-slate-200"
-                        >
-                          {img.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {showAdvancedUrl && (
+              <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  Enlace directo de la imagen (URL):
+                </label>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://ejemplo.com/foto.jpg"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Description */}
+          {/* Row 5: Description / Notes */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Descripción / Notas para el cliente
+              Descripción / Notas para el Cliente (Opcional)
             </label>
             <textarea
-              id="form-product-desc"
+              id="form-product-description"
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detalles sobre presentación, beneficios, recomendaciones de uso..."
+              placeholder="Detalles sobre presentación, condiciones de venta o características..."
               className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
-          {/* Actions */}
-          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+          {/* Action Buttons */}
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
@@ -530,7 +598,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <button
               id="btn-save-product-modal"
               type="submit"
-              className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-98"
+              className="py-2.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-98"
             >
               <Save className="w-4 h-4" />
               <span>{productToEdit ? 'Guardar Cambios' : 'Crear Producto'}</span>

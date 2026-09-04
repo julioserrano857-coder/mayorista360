@@ -16,7 +16,9 @@ import {
   INITIAL_PRODUCTS,
   INITIAL_PREVENTISTAS,
   INITIAL_SETTINGS,
-  INITIAL_ADMIN
+  INITIAL_ADMIN,
+  DEMO_CATEGORIES,
+  DEMO_PRODUCTS
 } from '../data/initialData';
 import { generateSlug, cleanWhatsAppNumber } from '../utils/whatsapp';
 import {
@@ -96,6 +98,8 @@ interface StoreContextType {
   loginAdmin: (password: string) => boolean;
   logoutAdmin: () => void;
   resetAllDataToDefaults: () => void;
+  clearAllCatalogData: () => void;
+  loadDemoData: () => void;
 
   // Cloud Sync & Persistence (Supabase + LocalStorage)
   isCloudConnected: boolean;
@@ -892,6 +896,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCart([]);
   };
 
+  const clearAllCatalogData = () => {
+    setProducts([]);
+    setCategories([]);
+    setCart([]);
+    try {
+      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify([]));
+      localStorage.removeItem(STORAGE_KEYS.CART);
+      localStorage.removeItem(STORAGE_KEYS.CART_TIMESTAMP);
+    } catch {
+      // ignore
+    }
+  };
+
+  const loadDemoData = () => {
+    setCategories(DEMO_CATEGORIES);
+    setProducts(DEMO_PRODUCTS);
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -933,6 +956,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         loginAdmin,
         logoutAdmin,
         resetAllDataToDefaults,
+        clearAllCatalogData,
+        loadDemoData,
         isCloudConnected,
         isCloudSyncing,
         cloudStatusText,

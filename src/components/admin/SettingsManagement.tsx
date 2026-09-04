@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import {
   Lock,
@@ -46,6 +46,12 @@ export const SettingsManagement: React.FC = () => {
   const [defaultWhatsApp, setDefaultWhatsApp] = useState(settings.defaultWhatsApp);
   const [announcement, setAnnouncement] = useState(settings.announcement || '');
   const [savedSettings, setSavedSettings] = useState(false);
+
+  useEffect(() => {
+    setCompanyName(settings.companyName);
+    setDefaultWhatsApp(settings.defaultWhatsApp);
+    setAnnouncement(settings.announcement || '');
+  }, [settings.companyName, settings.defaultWhatsApp, settings.announcement]);
 
   // Supabase Credentials State
   const initialCloudConfig = getSupabaseConfig();

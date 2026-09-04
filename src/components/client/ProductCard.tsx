@@ -43,18 +43,26 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
     setQuantity((q) => Math.max(1, q - 1));
   };
 
-  const getSpeciesBadge = (species: Product['species']) => {
-    switch (species) {
-      case 'Perro':
-        return { label: 'Perro', icon: '🐶', bg: 'bg-sky-50 text-sky-700 border-sky-200' };
-      case 'Gato':
-        return { label: 'Gato', icon: '🐱', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
-      default:
-        return { label: 'Otros', icon: '🐾', bg: 'bg-amber-50 text-amber-800 border-amber-200' };
+  const getProductBadge = (p: Product) => {
+    if (category?.name) {
+      return { label: category.name, icon: '🏷️', bg: 'bg-slate-100 text-slate-800 border-slate-200' };
     }
+    if (p.species === 'Perro') {
+      return { label: 'Perro', icon: '🐶', bg: 'bg-sky-50 text-sky-700 border-sky-200' };
+    }
+    if (p.species === 'Gato') {
+      return { label: 'Gato', icon: '🐱', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
+    }
+    if (p.species === 'Otros') {
+      return { label: 'Aves / Otros', icon: '🦜', bg: 'bg-amber-50 text-amber-800 border-amber-200' };
+    }
+    if (p.rubro) {
+      return { label: p.rubro, icon: '📦', bg: 'bg-slate-100 text-slate-800 border-slate-200' };
+    }
+    return { label: 'Mayorista', icon: '📦', bg: 'bg-slate-100 text-slate-800 border-slate-200' };
   };
 
-  const spBadge = getSpeciesBadge(product.species);
+  const spBadge = getProductBadge(product);
 
   /* ---------------------------------------------------- */
   /* LIST VIEW MODE (Ideal for rapid mobile orders)       */

@@ -87,8 +87,29 @@ export const CategoryManagement: React.FC = () => {
 
       {/* Categories Table / List */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs sm:text-sm">
+        {sortedCategories.length === 0 ? (
+          <div className="p-8 sm:p-12 text-center max-w-md mx-auto">
+            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-emerald-600">
+              <Layers className="w-7 h-7" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-900 mb-1">
+              No tienes categorías creadas
+            </h4>
+            <p className="text-xs text-slate-500 mb-4">
+              Crea tus propias categorías según tu negocio (ej: Bebidas, Golosinas, Cigarrillos, Alimentos, etc.) para organizar los productos.
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Crear Primera Categoría</span>
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-bold">
                 <th className="py-3 px-4 w-20 text-center">Prioridad</th>
@@ -211,7 +232,14 @@ export const CategoryManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+        )}
       </div>
+
+      <CategoryFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        categoryToEdit={editingCategory}
+      />
     </div>
   );
 };

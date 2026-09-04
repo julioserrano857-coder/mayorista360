@@ -1,12 +1,9 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
-import { Species } from '../../types';
 import {
   ShoppingBag,
   Search,
   Phone,
-  UserCheck,
-  Building2,
   X,
   SlidersHorizontal
 } from 'lucide-react';
@@ -16,8 +13,6 @@ import { PWAInstallButton } from '../common/PWAInstallButton';
 interface HeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  selectedSpecies: Species | 'Todos';
-  onSpeciesChange: (species: Species | 'Todos') => void;
   onOpenCart: () => void;
   stockFilterOnly: boolean;
   onToggleStockFilter: () => void;
@@ -26,20 +21,11 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   searchTerm,
   onSearchChange,
-  selectedSpecies,
-  onSpeciesChange,
   onOpenCart,
   stockFilterOnly,
   onToggleStockFilter
 }) => {
   const { settings, activePreventista, cartCount, cartTotal } = useStore();
-
-  const speciesList: Array<{ id: Species | 'Todos'; label: string; icon: string }> = [
-    { id: 'Todos', label: 'Todos', icon: '🐾' },
-    { id: 'Perro', label: 'Perros', icon: '🐶' },
-    { id: 'Gato', label: 'Gatos', icon: '🐱' },
-    { id: 'Otros', label: 'Otras Especies', icon: '🦜' },
-  ];
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -56,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Logo & Brand (Client Pure View) */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-bold text-xl ring-2 ring-white">
-              🐾
+              📦
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -105,14 +91,14 @@ export const Header: React.FC<HeaderProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Buscar por alimento, marca, peso o SKU..."
+                placeholder="Buscar por nombre, marca o presentación..."
                 className="w-full pl-10 pr-9 py-2 bg-slate-100/90 hover:bg-slate-100 focus:bg-white text-sm text-slate-800 rounded-xl border border-slate-200/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 focus:outline-none transition-all placeholder:text-slate-400 shadow-2xs"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => onSearchChange('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -122,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Direct WhatsApp Call/Chat quick chip if preventista has whatsapp */}
+            {/* Direct WhatsApp info */}
             {activePreventista && (
               <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-mono">
                 <Phone className="w-3 h-3 text-emerald-600" />
@@ -130,14 +116,31 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
+            {/* In-Stock Filter Toggle */}
+            <button
+              id="btn-filter-stock-only"
+              type="button"
+              onClick={onToggleStockFilter}
+              className={`px-2.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 border transition-all touch-action-manipulation cursor-pointer shrink-0 ${
+                stockFilterOnly
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+              title="Filtrar solo artículos disponibles"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Solo disponibles</span>
+              <span className="sm:hidden">En stock</span>
+            </button>
+
             {/* PWA Install Button */}
             <PWAInstallButton variant="header" label="Instalar App" />
 
-            {/* Cart Button with Vibrant Accent */}
+            {/* Cart Button */}
             <button
               id="header-btn-cart"
               onClick={onOpenCart}
-              className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/20 hover:shadow-lg transition-all active:scale-95"
+              className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/20 hover:shadow-lg transition-all active:scale-95 cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden xs:inline">Pedido</span>
@@ -164,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar alimento, marca, peso o SKU..."
+              placeholder="Buscar productos en el catálogo..."
               className="w-full pl-10 pr-9 py-2.5 bg-slate-100 focus:bg-white text-base sm:text-sm text-slate-800 rounded-xl border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 focus:outline-none transition-all placeholder:text-slate-400 shadow-2xs"
             />
             {searchTerm && (
@@ -178,46 +181,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
           </div>
-        </div>
-
-        {/* Species Filter Tabs & In-Stock Toggle */}
-        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1.5">
-            {speciesList.map((sp) => {
-              const isSelected = selectedSpecies === sp.id;
-              return (
-                <button
-                  key={sp.id}
-                  id={`species-filter-${sp.id.toLowerCase()}`}
-                  type="button"
-                  onClick={() => onSpeciesChange(sp.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 touch-action-manipulation cursor-pointer ${
-                    isSelected
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-100/90 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
-                  }`}
-                >
-                  <span>{sp.icon}</span>
-                  <span>{sp.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            id="btn-filter-stock-only"
-            type="button"
-            onClick={onToggleStockFilter}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all touch-action-manipulation cursor-pointer ${
-              stockFilterOnly
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">Solo disponibles</span>
-            <span className="sm:hidden">En stock</span>
-          </button>
         </div>
       </div>
     </header>

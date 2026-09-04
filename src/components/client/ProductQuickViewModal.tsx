@@ -69,15 +69,14 @@ export const ProductQuickViewModal: React.FC<ProductQuickViewModalProps> = ({
           {/* Details */}
           <div className="p-6 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                  {category?.name || 'General'}
-                </span>
-                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                  {product.species}
-                </span>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                {category?.name && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                    {category.name}
+                  </span>
+                )}
                 {product.brand && (
-                  <span className="text-xs font-bold text-slate-700">
+                  <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
                     {product.brand}
                   </span>
                 )}
