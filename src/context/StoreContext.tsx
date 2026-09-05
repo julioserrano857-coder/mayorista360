@@ -246,6 +246,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshFromCloud();
   }, [refreshFromCloud]);
 
+  // Auto-clean "ghost" orders: pending orders older than 7 days that were
+  // never confirmed (the client tapped send but the preventista never
+  // forwarded/received it). Runs whenever the admin opens the panel.
+  useEffect(() => {
+    if (!isAdminAuthenticated || !isSupabaseConfigured()) return;
+
+    const cleanup = async () => {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      try {
+        const ok = await supabaseClient.deleteWhere('orders', {
+          status: 'eq.Pendiente',
+          created_at: `lt.${sevenDaysAgo}`
+        });
+        if (ok) {
+          // Remove them from local state too
+          setOrders((prev) => prev.filter((o) => o.status !== 'Pendiente' || new Date(o.createdAt) >= new Date(sevenDaysAgo)));
+        }
+      } catch (err) {
+        console.warn('[Auto-clean ghost orders]', err);
+      }
+    };
+
+    cleanup();
+  }, [isAdminAuthenticated]);
+
   const handleWriteError = (context: string, err: any) => {
     console.warn(`[Supabase Write Error] ${context}`, err);
     setIsCloudConnected(false);

@@ -205,6 +205,28 @@ export const supabaseClient = {
     }
   },
 
+  // Delete rows matching multiple filters, e.g. deleteWhere('orders', { status: 'eq.Pendiente', created_at: 'lt.2026-08-29T...' })
+  async deleteWhere(table: string, filters: Record<string, string>): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    const { url, key } = getSupabaseConfig();
+    try {
+      const query = Object.entries(filters)
+        .map(([col, op]) => `${col}=${op}`)
+        .join('&');
+      const response = await fetch(`${url}/rest/v1/${table}?${query}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`
+        }
+      });
+      return response.ok;
+    } catch (err) {
+      console.warn(`[Supabase DeleteWhere Error] ${table}:`, err);
+      throw err;
+    }
+  },
+
   async deleteAll(table: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     const { url, key } = getSupabaseConfig();
