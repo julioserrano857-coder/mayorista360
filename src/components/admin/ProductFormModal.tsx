@@ -18,6 +18,7 @@ import {
   Plus
 } from 'lucide-react';
 import { processImageFile } from '../../utils/imageCompressor';
+import { PLACEHOLDER_IMG } from '../../utils/productImages';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ interface ProductFormModalProps {
   productToEdit?: Product | null;
 }
 
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&auto=format&fit=crop&q=80';
+const DEFAULT_IMAGE = PLACEHOLDER_IMG;
 
 const SUGGESTED_PRESENTATIONS = [
   'Unidad',
@@ -190,7 +191,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       weight: weight.trim() || 'Unidad',
       price: finalPrice,
       status,
-      imageUrl: imageUrl.trim() || DEFAULT_IMAGE,
+      imageUrl: imageUrl.trim(),
       brand: brand.trim() || undefined,
       description: description.trim() || undefined,
       sku: sku.trim() || undefined

@@ -43,7 +43,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   // Recipient: Active preventista's direct WhatsApp OR default company WhatsApp
   const targetPhone = activePreventista?.whatsapp || settings.defaultWhatsApp;
-  const targetName = activePreventista?.name || 'Central de Preventas';
+  const targetName = activePreventista?.name || settings.companyName || 'Ventas Central';
 
   // Preview message before submit
   const previewMessage = buildWhatsAppOrderMessage({
@@ -140,7 +140,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   Enviar Pedido a WhatsApp
                 </h3>
                 <p className="text-xs text-emerald-100 font-medium">
-                  Directo al WhatsApp de tu preventista
+                  {activePreventista ? `Directo al WhatsApp de ${activePreventista.name}` : 'Directo al WhatsApp de la empresa'}
                 </p>
               </div>
             </div>
@@ -284,7 +284,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   Productos en tu pedido ({cart.length})
                 </span>
                 <span className="text-[11px] font-semibold text-slate-500">
-                  {cart.reduce((acc, curr) => acc + curr.quantity, 0)} bultos
+                  {cart.reduce((acc, curr) => acc + curr.quantity, 0)} unidades
                 </span>
               </div>
 
@@ -362,7 +362,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-98 order-1 sm:order-2 touch-action-manipulation cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>Enviar Pedido al WhatsApp del Preventista</span>
+                <span>Enviar Pedido por WhatsApp</span>
               </button>
             </div>
           </form>

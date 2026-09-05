@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Product } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { formatCurrency } from '../../utils/whatsapp';
-import { X, Plus, Minus, ShoppingBag, Check, AlertCircle, ShieldCheck, Truck } from 'lucide-react';
+import { PLACEHOLDER_IMG } from '../../utils/productImages';
+import { X, Plus, Minus, ShoppingBag, Check, AlertCircle } from 'lucide-react';
 
 interface ProductQuickViewModalProps {
   product: Product | null;
@@ -49,12 +50,11 @@ export const ProductQuickViewModal: React.FC<ProductQuickViewModalProps> = ({
           {/* Image */}
           <div className="relative aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
             <img
-              src={product.imageUrl}
+              src={product.imageUrl || PLACEHOLDER_IMG}
               alt={product.name}
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&auto=format&fit=crop&q=80';
+                (e.target as HTMLImageElement).src = PLACEHOLDER_IMG;
               }}
             />
             {isOutOfStock && (
@@ -88,12 +88,6 @@ export const ProductQuickViewModal: React.FC<ProductQuickViewModalProps> = ({
 
               <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
                 <span>Presentación: <strong className="text-slate-800">{product.weight}</strong></span>
-                {product.sku && (
-                  <>
-                    <span>•</span>
-                    <span>SKU: <strong className="font-mono text-slate-800">{product.sku}</strong></span>
-                  </>
-                )}
               </div>
 
               {product.description && (
@@ -101,26 +95,18 @@ export const ProductQuickViewModal: React.FC<ProductQuickViewModalProps> = ({
                   {product.description}
                 </p>
               )}
-
-              <div className="space-y-1.5 py-2 border-y border-slate-100 text-xs text-slate-500 mb-4">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Garantía de calidad y fecha de vencimiento óptima</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-emerald-600" />
-                  <span>Distribución mayorista directa con stock verificado</span>
-                </div>
-              </div>
             </div>
 
             <div>
               <div className="mb-3">
                 <span className="text-xs uppercase font-bold text-slate-400 block">
-                  Precio Mayorista por Unidad
+                  Precio
                 </span>
                 <span className="text-2xl font-black text-slate-900 tracking-tight">
                   {formatCurrency(product.price, settings.currencySymbol)}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold ml-1.5">
+                  {product.weight}
                 </span>
               </div>
 

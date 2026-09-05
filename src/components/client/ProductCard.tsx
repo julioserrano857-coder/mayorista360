@@ -2,6 +2,7 @@ import React, { useState, memo } from 'react';
 import { Product, Category } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { formatCurrency } from '../../utils/whatsapp';
+import { PLACEHOLDER_IMG } from '../../utils/productImages';
 import { Plus, Minus, Check, ShoppingBag, AlertCircle, Eye } from 'lucide-react';
 
 interface ProductCardProps {
@@ -69,7 +70,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200/70">
             <img
-              src={product.imageUrl}
+              src={product.imageUrl || PLACEHOLDER_IMG}
               alt={product.name}
               loading="lazy"
               decoding="async"
@@ -77,8 +78,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
                 isOutOfStock ? 'grayscale-[60%]' : ''
               }`}
               onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&auto=format&fit=crop&q=80';
+                (e.target as HTMLImageElement).src = PLACEHOLDER_IMG;
               }}
             />
             {cartItem && (
@@ -102,11 +102,6 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
                 <span>{spBadge.icon}</span>
                 <span>{spBadge.label}</span>
               </span>
-              {product.sku && (
-                <span className="font-mono text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 hidden sm:inline-block">
-                  Cód: {product.sku}
-                </span>
-              )}
               {isOutOfStock && (
                 <span className="font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                   <AlertCircle className="w-2.5 h-2.5" /> Sin stock
@@ -118,13 +113,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               {product.name}
             </h4>
 
-            <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-xs sm:text-sm font-black text-slate-950">
-                {formatCurrency(product.price, settings.currencySymbol)}
-              </span>
-              <span className="text-[10px] font-semibold text-slate-500">
-                / bulto cerrado
-              </span>
+            <div className="mt-0.5 text-sm font-black text-slate-950">
+              {formatCurrency(product.price, settings.currencySymbol)}
             </div>
           </div>
         </div>
@@ -208,7 +198,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
       {/* Image Container - Square Aspect for Clean Mobile 2-Col Grid */}
       <div className="relative aspect-square w-full bg-slate-100/90 overflow-hidden">
         <img
-          src={product.imageUrl}
+          src={product.imageUrl || PLACEHOLDER_IMG}
           alt={product.name}
           loading="lazy"
           decoding="async"
@@ -216,8 +206,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
             isOutOfStock ? 'grayscale-[60%]' : ''
           }`}
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&auto=format&fit=crop&q=80';
+            (e.target as HTMLImageElement).src = PLACEHOLDER_IMG;
           }}
         />
 
@@ -289,13 +278,6 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
             {product.name}
           </h3>
 
-          {/* SKU / Code if present */}
-          {product.sku && (
-            <div className="text-[10px] font-mono text-slate-500 mb-1 hidden xs:block">
-              Cód: {product.sku}
-            </div>
-          )}
-
           {product.description && (
             <p className="text-[11px] text-slate-500 line-clamp-1 mb-2 hidden sm:block">
               {product.description}
@@ -305,17 +287,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
 
         {/* Price and Actions */}
         <div className="mt-2 pt-2 border-t border-slate-100">
-          <div className="flex items-baseline justify-between mb-2">
-            <div>
-              <span className="text-[9px] uppercase tracking-wider text-slate-500 block font-bold leading-none mb-0.5">
-                Mayorista
-              </span>
-              <span className="text-sm sm:text-lg font-black text-slate-950 tracking-tight">
-                {formatCurrency(product.price, settings.currencySymbol)}
-              </span>
-            </div>
-            <span className="text-[10px] font-semibold text-slate-500">
-              x bulto
+          <div className="mb-2">
+            <span className="text-sm sm:text-lg font-black text-slate-950 tracking-tight">
+              {formatCurrency(product.price, settings.currencySymbol)}
             </span>
           </div>
 

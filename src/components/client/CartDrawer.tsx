@@ -7,10 +7,7 @@ import {
   Plus,
   Minus,
   ShoppingBag,
-  ArrowRight,
-  UserCheck,
-  Building2,
-  ShieldCheck
+  ArrowRight
 } from 'lucide-react';
 
 interface CartDrawerProps {
@@ -70,30 +67,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             >
               <X className="w-5 h-5" />
             </button>
-          </div>
-
-          {/* Assigned Recipient Box */}
-          <div className="px-4 py-2.5 bg-emerald-50/70 border-b border-emerald-100 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              {activePreventista ? (
-                <>
-                  <UserCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span className="text-slate-700">
-                    Preventista: <strong>{activePreventista.name}</strong>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Building2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span className="text-slate-700">
-                    Atención: <strong>Central de Distribución</strong>
-                  </span>
-                </>
-              )}
-            </div>
-            <span className="text-[11px] font-semibold text-emerald-800 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp Directo
-            </span>
           </div>
 
           {/* Items List */}
@@ -225,14 +198,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     {formatCurrency(cartTotal, settings.currencySymbol)}
                   </span>
                 </div>
-                <span className="text-[11px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-md">
-                  Precios Mayoristas
-                </span>
               </div>
 
               {/* WhatsApp direct notice */}
               <div className="text-[11px] text-slate-600 bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 flex items-center justify-between">
-                <span>Destino: <strong>{activePreventista ? activePreventista.name : 'Central de Preventas'}</strong></span>
+                <span>Destino: <strong>{activePreventista ? activePreventista.name : (settings.companyName || 'Ventas Central')}</strong></span>
                 <span className="font-mono font-bold text-emerald-800">+{activePreventista?.whatsapp || settings.defaultWhatsApp}</span>
               </div>
 
@@ -241,7 +211,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 onClick={onProceedCheckout}
                 className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-98 cursor-pointer touch-action-manipulation"
               >
-                <span>Finalizar y Enviar al Preventista</span>
+                <span>Finalizar y Enviar Pedido</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

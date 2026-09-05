@@ -16,13 +16,8 @@ import {
   ShoppingBag,
   Package,
   Search,
-  CheckCircle2,
   Phone,
-  ShieldCheck,
-  Truck,
-  Building2,
   SlidersHorizontal,
-  Layers,
   LayoutGrid,
   List,
   ArrowRight
@@ -401,63 +396,26 @@ function MainApp() {
         </div>
       )}
 
-      {/* 5. Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-auto py-10 px-4 sm:px-6 lg:px-8 text-xs">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          <div>
-            <div className="flex items-center gap-2.5 mb-2">
-              <span className="text-2xl">📦</span>
-              <span className="font-extrabold text-base text-slate-900">
-                {settings.companyName}
-              </span>
-            </div>
-            <p className="text-slate-500 leading-relaxed max-w-sm">
-              Distribución mayorista multirrubro directa con pedidos por WhatsApp a tu preventista asignado.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-slate-900 text-sm mb-3">
-              Canales de Atención
-            </h4>
-            <div className="space-y-2 text-slate-500">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-sky-600" />
-                <span>Atención Central: +{settings.defaultWhatsApp}</span>
-              </div>
-              {activePreventista && (
-                <div className="flex items-center gap-2 text-emerald-900 font-semibold bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Preventista asignado: {activePreventista.name}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-slate-900 text-sm mb-3">
-              Información de Pedidos Mayoristas
-            </h4>
-            <div className="space-y-2 text-slate-500 text-xs">
-              <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Envíos y repartos directos a comercios y revendedores</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-sky-600 shrink-0" />
-                <span>Venta por bulto cerrado, cartón o display cerrado</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>Confirmación y envío directo de pedido por WhatsApp</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-400 text-[11px]">
-          <span>© {new Date().getFullYear()} {settings.companyName}. Todos los derechos reservados.</span>
-          <span className="font-medium text-slate-500">Catálogo Digital Mayorista con Pedidos por WhatsApp</span>
+      {/* 5. Footer (minimal) */}
+      <footer className="bg-white border-t border-slate-200 mt-auto py-5 px-4 sm:px-6 lg:px-8 text-xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="font-extrabold text-slate-900">
+            📦 {settings.companyName}
+          </span>
+          {settings.defaultWhatsApp && (
+            <a
+              href={`https://wa.me/${settings.defaultWhatsApp}?text=${encodeURIComponent('Hola, tengo una consulta sobre el catálogo mayorista.')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-slate-600 hover:text-emerald-700 font-semibold"
+            >
+              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+              +{settings.defaultWhatsApp}
+            </a>
+          )}
+          <span className="text-slate-400">
+            © {new Date().getFullYear()} {settings.companyName}
+          </span>
         </div>
       </footer>
 

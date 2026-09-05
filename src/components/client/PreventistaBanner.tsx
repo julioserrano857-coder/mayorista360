@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
-import { UserCheck, Phone, ShieldCheck, MapPin, Building2 } from 'lucide-react';
+import { Phone, MapPin, Building2 } from 'lucide-react';
 import { generateWhatsAppLink } from '../../utils/whatsapp';
 
 export const PreventistaBanner: React.FC = () => {
@@ -8,22 +8,19 @@ export const PreventistaBanner: React.FC = () => {
 
   if (!activePreventista) {
     return (
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-100 py-2.5 px-4 border-b border-slate-800">
+      <div className="bg-slate-900 text-slate-100 py-2 px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-sky-400 shrink-0" />
             <span>
-              <strong>Ventas Mayoristas Directas:</strong> Pedidos enviados a la Central de Distribución.
+              Tus pedidos van a <strong>{settings.companyName || 'Ventas Central'}</strong> por WhatsApp.
             </span>
           </div>
-          <div className="flex items-center gap-3 text-slate-400">
+          {settings.defaultWhatsApp && (
             <span className="flex items-center gap-1 text-slate-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Precios Mayoristas
+              <Phone className="w-3.5 h-3.5 text-sky-400" /> +{settings.defaultWhatsApp}
             </span>
-            <span className="flex items-center gap-1 text-slate-300">
-              <Phone className="w-3.5 h-3.5 text-sky-400" /> WhatsApp +{settings.defaultWhatsApp}
-            </span>
-          </div>
+          )}
         </div>
       </div>
     );
