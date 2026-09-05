@@ -16,8 +16,7 @@ import {
   Share2,
   Sparkles,
   Building2,
-  X,
-  Smartphone
+  X
 } from 'lucide-react';
 
 export const PreventistaManagement: React.FC = () => {
@@ -61,9 +60,6 @@ export const PreventistaManagement: React.FC = () => {
           <h3 className="text-base font-extrabold text-slate-900">
             Gestión de Preventistas y Generador de Enlaces
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Cada preventista cuenta con un link exclusivo para que los pedidos de sus clientes lleguen directo a su WhatsApp
-          </p>
         </div>
 
         <button
@@ -74,21 +70,6 @@ export const PreventistaManagement: React.FC = () => {
           <Plus className="w-4 h-4" />
           <span>Nuevo Preventista</span>
         </button>
-      </div>
-
-      {/* PWA Mobile Tip */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
-        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-          <Smartphone className="w-5 h-5" />
-        </div>
-        <div className="text-xs text-emerald-950">
-          <p className="font-extrabold text-emerald-900">
-            ¡Tanto los enlaces de pedidos como este panel son instalables como App móvil (PWA)!
-          </p>
-          <p className="text-emerald-800/90 mt-0.5">
-            Cuando un cliente o preventista abre su enlace desde Chrome, Safari (iPhone) o Edge, puede tocar el botón <strong>"Instalar App"</strong> en la cabecera para guardarlo en la pantalla principal de su celular como una app nativa, funcionando incluso sin conexión.
-          </p>
-        </div>
       </div>
 
       {/* Fallback General Link Card */}

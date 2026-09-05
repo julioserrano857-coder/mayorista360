@@ -235,9 +235,6 @@ export const OrdersManagement: React.FC = () => {
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
             Registro de Pedidos Recibidos
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Busca pedidos por código de 4 dígitos, actualiza entregas y consulta ventas por preventista.
-          </p>
         </div>
 
         {/* Date Filter & Clear Delivered button */}

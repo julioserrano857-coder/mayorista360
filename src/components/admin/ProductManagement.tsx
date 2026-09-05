@@ -100,7 +100,6 @@ export const ProductManagement: React.FC = () => {
           <div className="text-2xl font-black text-slate-900 mt-1">
             {products.length}
           </div>
-          <div className="text-xs text-slate-400 mt-0.5">En el catálogo mayorista</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
@@ -110,7 +109,6 @@ export const ProductManagement: React.FC = () => {
           <div className="text-2xl font-black text-emerald-700 mt-1">
             {inStockCount}
           </div>
-          <div className="text-xs text-slate-400 mt-0.5">Listos para agregar al carrito</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
@@ -120,7 +118,6 @@ export const ProductManagement: React.FC = () => {
           <div className="text-2xl font-black text-rose-700 mt-1">
             {outOfStockCount}
           </div>
-          <div className="text-xs text-slate-400 mt-0.5">Marcados sin stock</div>
         </div>
       </div>
 

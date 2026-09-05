@@ -252,9 +252,6 @@ export const SettingsManagement: React.FC = () => {
             <h3 className="text-base font-extrabold text-slate-900">
               Datos Generales de la Empresa
             </h3>
-            <p className="text-xs text-slate-500">
-              Configura el nombre comercial y el número de atención central
-            </p>
           </div>
         </div>
 
@@ -351,46 +348,11 @@ export const SettingsManagement: React.FC = () => {
                   Activa
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
-                Instala tanto el panel como los enlaces de preventistas como una aplicación nativa en celulares y computadoras
-              </p>
             </div>
           </div>
 
           <div className="shrink-0">
             <PWAInstallButton variant="primary" label="Instalar esta App en tu Dispositivo" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-            <div className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-              <span>🚀</span>
-              <span>Sin Descargas de Tiendas</span>
-            </div>
-            <p className="text-slate-500 leading-relaxed">
-              Tus clientes y preventistas pueden instalar la app directamente desde Chrome, Safari o Edge con 1 toque sin pasar por Play Store o App Store.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-            <div className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-              <span>☁️</span>
-              <span>Datos en la Nube</span>
-            </div>
-            <p className="text-slate-500 leading-relaxed">
-              Catálogo, precios y pedidos se guardan en Supabase y se ven igual en cualquier dispositivo con internet.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-            <div className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-              <span>📲</span>
-              <span>Icono en Pantalla de Inicio</span>
-            </div>
-            <p className="text-slate-500 leading-relaxed">
-              Se abre en pantalla completa sin barra de navegación del navegador, brindando la experiencia de una app profesional.
-            </p>
           </div>
         </div>
       </div>
@@ -405,9 +367,6 @@ export const SettingsManagement: React.FC = () => {
             <h3 className="text-base font-extrabold text-slate-900">
               Seguridad y Contraseña del Administrador
             </h3>
-            <p className="text-xs text-slate-500">
-              Modifica la clave de acceso al panel de administración (se guarda en la nube)
-            </p>
           </div>
         </div>
 

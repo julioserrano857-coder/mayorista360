@@ -70,9 +70,6 @@ export const CategoryManagement: React.FC = () => {
           <h3 className="text-base font-extrabold text-slate-900">
             Gestión de Categorías
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Crea, edita y ordena las secciones visibles en el catálogo de clientes
-          </p>
         </div>
 
         <button
