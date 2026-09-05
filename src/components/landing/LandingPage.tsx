@@ -26,7 +26,7 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     isCloudConfigured
   } = useStore();
 
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -36,20 +36,26 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setError('');
 
+    if (!username.trim()) {
+      setError('Ingresá el usuario');
+      return;
+    }
+
     if (!password.trim()) {
-      setError('Por favor ingresa la contraseña');
+      setError('Ingresá la contraseña');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const isSuccess = await loginAdmin(password);
+      const isSuccess = username.trim().toLowerCase() === 'admin' && (await loginAdmin(password));
       if (isSuccess) {
         setPassword('');
+        setUsername('');
         onLoginSuccess();
       } else {
-        setError('Contraseña incorrecta. (Clave por defecto: 123456)');
+        setError('Usuario o contraseña incorrectos');
       }
     } catch {
       setError('No se pudo conectar. Revisá tu internet e intentá de nuevo.');
@@ -194,15 +200,11 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   </button>
                 </div>
 
-                {error ? (
+                {error && (
                   <div className="mt-2.5 flex items-center gap-1.5 text-xs text-rose-400 font-semibold bg-rose-500/10 border border-rose-500/20 p-2 rounded-lg">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{error}</span>
                   </div>
-                ) : (
-                  <p className="mt-2 text-[11px] text-slate-400 text-right">
-                    Clave por defecto: <code className="text-sky-300 font-bold bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">123456</code>
-                  </p>
                 )}
               </div>
 

@@ -23,7 +23,7 @@ Sistema web y aplicación progresiva (PWA) para distribución mayorista multirru
 - **Mensaje Limpio y Profesional**: Mensaje preformateado con los productos, cantidades, peso, cliente y notas especiales.
 
 ### 3. 🛡️ Panel de Administración Mayorista (`/admin`)
-- **Acceso Protegido**: Autenticación por contraseña configurable (clave por defecto: `123456`).
+- **Acceso Protegido**: Autenticación por usuario y contraseña configurable desde el panel.
 - **Gestión de Pedidos Recibidos**:
   - Métricas de ventas (ingresos totales, bultos vendidos, pedidos pendientes y entregados).
   - Rendimiento y ventas desglosadas por preventista.
@@ -112,7 +112,7 @@ Sistema web y aplicación progresiva (PWA) para distribución mayorista multirru
 
 ---
 
-## 🔑 Credenciales por Defecto
+## 🔐 Acceso al Panel
 
-- **Usuario**: `admin`
-- **Contraseña inicial**: `123456`
+- **Usuario**: se configura en el panel (por defecto: `admin`)
+- **Contraseña**: se define al inicializar la base de datos y se puede cambiar desde el panel (Configuración → Seguridad y Contraseña).
