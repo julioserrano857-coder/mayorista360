@@ -112,7 +112,7 @@ export const ProductManagement: React.FC = () => {
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="text-xs font-bold text-rose-600 uppercase tracking-wider">
-            Sin Stock
+            Pausados (ocultos)
           </div>
           <div className="text-2xl font-black text-rose-700 mt-1">
             {outOfStockCount}
@@ -176,7 +176,7 @@ export const ProductManagement: React.FC = () => {
           >
             <option value="all">Todos los Estados</option>
             <option value="Disponible">🟢 Solo Disponibles</option>
-            <option value="Sin Stock">🔴 Solo Sin Stock</option>
+            <option value="Sin Stock">🔴 Solo Pausados</option>
           </select>
 
           {(searchTerm || selectedCategory !== 'all' || selectedStatus !== 'all') && (
@@ -336,7 +336,7 @@ export const ProductManagement: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Status toggle */}
+                        {/* Status toggle: Pausar / Reactivar */}
                         <td className="py-3 px-4">
                           <button
                             onClick={() => toggleProductStatus(product.id)}
@@ -345,6 +345,11 @@ export const ProductManagement: React.FC = () => {
                                 ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
                                 : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
                             }`}
+                            title={
+                              product.status === 'Disponible'
+                                ? 'Pausar: oculta el producto del catálogo (sin borrar nada)'
+                                : 'Reactivar: el producto vuelve a aparecer en el catálogo'
+                            }
                           >
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
@@ -353,7 +358,11 @@ export const ProductManagement: React.FC = () => {
                                   : 'bg-rose-500'
                               }`}
                             />
-                            <span>{product.status}</span>
+                            {product.status === 'Disponible' ? (
+                              <span>Pausar</span>
+                            ) : (
+                              <span>Reactivar</span>
+                            )}
                           </button>
                         </td>
 
@@ -392,7 +401,7 @@ export const ProductManagement: React.FC = () => {
               Mostrando {filteredProducts.length} de {products.length} productos
             </span>
             <span className="text-[11px] text-slate-400">
-              Haz clic en el precio o estado para editar rápido
+              Haz clic en el precio para editarlo, o en el estado para pausar/reactivar
             </span>
           </div>
         )}

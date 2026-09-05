@@ -410,8 +410,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 onChange={(e) => setStatus(e.target.value as ProductStatus)}
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:border-emerald-500 font-medium"
               >
-                <option value="Disponible">🟢 Disponible</option>
-                <option value="Sin Stock">🔴 Sin Stock</option>
+                <option value="Disponible">🟢 Disponible (se muestra en el catálogo)</option>
+                <option value="Sin Stock">🔴 Pausado (no aparece en el catálogo)</option>
               </select>
             </div>
           </div>

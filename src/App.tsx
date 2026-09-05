@@ -66,7 +66,6 @@ function MainApp() {
   // Client Catalog Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
-  const [stockFilterOnly, setStockFilterOnly] = useState(false);
 
   // View Mode: 'grid' (2-column on mobile, 3-4 on PC) | 'list' (compact rapid wholesale rows)
   const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
@@ -95,11 +94,14 @@ function MainApp() {
   // Reset visibleCount on filter or search change to keep DOM render instantaneous
   useEffect(() => {
     setVisibleCount(24);
-  }, [searchTerm, selectedCategoryId, stockFilterOnly]);
+  }, [searchTerm, selectedCategoryId]);
 
-  // Filtered Products Logic
+  // Filtered Products Logic (catalog shows ONLY available products: paused/hidden ones never appear)
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
+      // Paused (Sin Stock) products are hidden from the client catalog
+      if (product.status !== 'Disponible') return false;
+
       // Search term
       const matchesSearch =
         searchTerm === '' ||
@@ -112,12 +114,9 @@ function MainApp() {
       const matchesCategory =
         selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
 
-      // Stock filter
-      const matchesStock = !stockFilterOnly || product.status === 'Disponible';
-
-      return matchesSearch && matchesCategory && matchesStock;
+      return matchesSearch && matchesCategory;
     });
-  }, [products, searchTerm, selectedCategoryId, stockFilterOnly]);
+  }, [products, searchTerm, selectedCategoryId]);
 
   // Slice for progressive rendering
   const visibleProducts = useMemo(() => {
@@ -186,8 +185,6 @@ function MainApp() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onOpenCart={() => setIsCartOpen(true)}
-        stockFilterOnly={stockFilterOnly}
-        onToggleStockFilter={() => setStockFilterOnly(!stockFilterOnly)}
       />
 
       {/* 2. Preventista / Channel Announcement Banner */}
@@ -245,13 +242,12 @@ function MainApp() {
                 Mostrando <strong>{Math.min(visibleCount, filteredProducts.length)}</strong> de{' '}
                 <strong>{filteredProducts.length}</strong> productos
                 {searchTerm && <span> para "{searchTerm}"</span>}
-                {(searchTerm || selectedCategoryId !== 'all' || stockFilterOnly) && (
+                {(searchTerm || selectedCategoryId !== 'all') && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchTerm('');
                       setSelectedCategoryId('all');
-                      setStockFilterOnly(false);
                     }}
                     className="ml-2 text-sky-600 hover:text-sky-700 font-bold hover:underline cursor-pointer touch-action-manipulation"
                   >
@@ -343,28 +339,40 @@ function MainApp() {
                 )}
               </>
             ) : (
-              /* Empty Search or Filter State */
+              /* Empty state: search without results OR all products paused/hidden */
               <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center max-w-md mx-auto my-12 shadow-xs">
                 <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                   <Search className="w-7 h-7" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800 mb-1">
-                  No encontramos productos coincidentes
-                </h3>
-                <p className="text-xs text-slate-500 mb-6">
-                  Prueba cambiando los términos de búsqueda o limpiando los filtros seleccionados.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategoryId('all');
-                    setStockFilterOnly(false);
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs touch-action-manipulation cursor-pointer"
-                >
-                  Ver todos los productos
-                </button>
+                {searchTerm || selectedCategoryId !== 'all' ? (
+                  <>
+                    <h4 className="text-base font-bold text-slate-800 mb-1">
+                      No encontramos productos coincidentes
+                    </h4>
+                    <p className="text-xs text-slate-500 mb-6">
+                      Prueba cambiando los términos de búsqueda o limpiando los filtros seleccionados.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedCategoryId('all');
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs touch-action-manipulation cursor-pointer"
+                    >
+                      Ver todos los productos
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-base font-bold text-slate-800 mb-1">
+                      No hay productos disponibles por el momento
+                    </h4>
+                    <p className="text-xs text-slate-500 mb-2">
+                      El catálogo se está actualizando. Volvé a consultar en un rato.
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </>

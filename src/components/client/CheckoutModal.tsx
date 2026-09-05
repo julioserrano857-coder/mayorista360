@@ -65,6 +65,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       return;
     }
 
+    // Safety: un producto pausado (sin stock) no se puede pedir
+    const pausedItem = cart.find((item) => item.product.status !== 'Disponible');
+    if (pausedItem) {
+      alert(`"${pausedItem.product.name}" quedó sin stock y no se puede pedir. Quitalo del pedido para continuar.`);
+      return;
+    }
+
     // Safety: if there is no destination WhatsApp number configured, block the order
     if (!targetPhone) {
       alert('Todavía no se configuró un WhatsApp de destino. Avisale al dueño para que lo cargue en Configuración.');

@@ -3,24 +3,19 @@ import { useStore } from '../../context/StoreContext';
 import {
   ShoppingBag,
   Search,
-  X,
-  SlidersHorizontal
+  X
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/whatsapp';
 interface HeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onOpenCart: () => void;
-  stockFilterOnly: boolean;
-  onToggleStockFilter: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   searchTerm,
   onSearchChange,
-  onOpenCart,
-  stockFilterOnly,
-  onToggleStockFilter
+  onOpenCart
 }) => {
   const { settings, cartCount, cartTotal } = useStore();
 
@@ -72,23 +67,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* In-Stock Filter Toggle */}
-            <button
-              id="btn-filter-stock-only"
-              type="button"
-              onClick={onToggleStockFilter}
-              className={`px-2.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 border transition-all touch-action-manipulation cursor-pointer shrink-0 ${
-                stockFilterOnly
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-              title="Filtrar solo artículos disponibles"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline">Solo disponibles</span>
-              <span className="sm:hidden">En stock</span>
-            </button>
-
             {/* Cart Button */}
             <button
               id="header-btn-cart"
