@@ -4,9 +4,12 @@ import { CartItem } from '../types';
  * Formats a number as a currency string (e.g. $ 68.500)
  */
 export function formatCurrency(amount: number, symbol = '$'): string {
-  return `${symbol} ${amount.toLocaleString('es-AR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+  const value = Math.round(amount * 100) / 100;
+  const hasCents = Math.abs(value % 1) > 0.001;
+  const fractionDigits = hasCents ? 2 : 0;
+  return `${symbol} ${value.toLocaleString('es-AR', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
   })}`;
 }
 

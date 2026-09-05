@@ -15,6 +15,9 @@ import { generateSlug, cleanWhatsAppNumber } from '../utils/whatsapp';
 import {
   supabaseClient,
   isSupabaseConfigured,
+  auth,
+  getSession,
+  ADMIN_EMAIL,
   toDbProduct,
   fromDbProduct,
   toDbCategory,
@@ -85,7 +88,7 @@ interface StoreContextType {
   updateSettings: (updates: Partial<StoreSettings>) => void;
   updateAdminPassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   isAdminAuthenticated: boolean;
-  loginAdmin: (password: string) => Promise<boolean>;
+  loginAdmin: (email: string, password: string) => Promise<boolean>;
   logoutAdmin: () => void;
   resetAllDataToDefaults: () => Promise<void>;
   clearAllCatalogData: () => Promise<void>;
@@ -104,7 +107,6 @@ interface StoreContextType {
 // Cart draft lives in localStorage (the ONLY approved local exception) and expires after 24h.
 const CART_STORAGE_KEY = 'mayorista360_cart_v1';
 const CART_TIMESTAMP_KEY = 'mayorista360_cart_timestamp_v1';
-const SESSION_STORAGE_KEY = 'mayorista360_admin_session_v1';
 const CART_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -128,11 +130,9 @@ function readCartFromDevice(): CartItem[] {
 }
 
 function readSessionFromDevice(): boolean {
-  try {
-    return sessionStorage.getItem(SESSION_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  // La sesión real es un JWT de Supabase Auth guardado como JSON por auth.signIn().
+  // Un 'true' pelado (falsificación vieja) ya no abre el panel.
+  return getSession() !== null;
 }
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -184,14 +184,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // ignore
     }
   }, [cart]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, String(isAdminAuthenticated));
-    } catch {
-      // ignore
-    }
-  }, [isAdminAuthenticated]);
 
   // ===================================================================
   // SUPABASE: single source of truth. Pull everything on mount.
@@ -273,8 +265,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleWriteError = (context: string, err: any) => {
     console.warn(`[Supabase Write Error] ${context}`, err);
-    setIsCloudConnected(false);
-    setCloudStatusText('⚠️ Sin conexión: el cambio no se guardó en la nube. Revisá tu internet.');
+    const status = err?.status;
+
+    if (status === 401 || status === 403) {
+      // Sesión vencida o sin permiso: fuera del panel.
+      setIsAdminAuthenticated(false);
+      try {
+        auth.signOut();
+      } catch {
+        // ignore
+      }
+      setCloudStatusText('Tu sesión venció. Volvé a entrar con tu email y contraseña.');
+      try {
+        alert('Tu sesión venció. Volvé a entrar con tu email y contraseña.');
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
+    if (!status || status >= 500) {
+      // Error de red o del servidor: el banner rojo de conexión lo comunica.
+      setIsCloudConnected(false);
+      setCloudStatusText('⚠️ Sin conexión: el cambio no se guardó en la nube. Revisá tu internet.');
+      return;
+    }
+
+    // 4xx: problema de datos (p. ej. borrar una categoría que tiene productos).
+    try {
+      alert(`No se pudo guardar: ${err?.message || 'Error en la nube.'}`);
+    } catch {
+      // ignore
+    }
   };
 
   // Resolve Active Preventista from slug or name
@@ -480,9 +502,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteCategory = (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    let removed: Category | null = null;
+    setCategories((prev) => {
+      removed = prev.find((c) => c.id === id) || null;
+      return prev.filter((c) => c.id !== id);
+    });
     if (isSupabaseConfigured()) {
-      supabaseClient.delete('categories', 'id', id).catch((err) => handleWriteError('deleteCategory', err));
+      supabaseClient.delete('categories', 'id', id).catch((err) => {
+        handleWriteError('deleteCategory', err);
+        // Rollback: si la nube no borró (p. ej. categoría con productos), restaurar la fila local.
+        if (removed) {
+          setCategories((prev) => (prev.some((c) => c.id === id) ? prev : [removed, ...prev]));
+        }
+      });
     }
   };
 
@@ -580,23 +612,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateAdminPassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
-    if (!newPassword || newPassword.trim().length < 4) return false;
+    const next = newPassword.trim();
+    if (!next || next.length < 6) return false;
     if (!isSupabaseConfigured()) return false;
     try {
-      const ok = await supabaseClient.rpc('admin_change_password', {
-        current_pwd: currentPassword.trim(),
-        new_pwd: newPassword.trim()
-      });
-      return ok === true;
+      const session = getSession();
+      const email = session?.email || ADMIN_EMAIL;
+      // 1) La contraseña actual debe ser válida (sign-in de verificación).
+      const valid = await auth.verifyPassword(email, currentPassword.trim());
+      if (!valid) return false;
+      // 2) Cambia la contraseña en Supabase Auth.
+      await auth.changePassword(next);
+      return true;
     } catch (err) {
       handleWriteError('updateAdminPassword', err);
       return false;
     }
   };
 
-  const loginAdmin = async (password: string): Promise<boolean> => {
-    const trimmed = password.trim();
-    if (!trimmed) return false;
+  const loginAdmin = async (email: string, password: string): Promise<boolean> => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    if (!trimmedEmail || !trimmedPassword) return false;
 
     if (!isSupabaseConfigured()) {
       setCloudStatusText('Supabase no configurado: no se puede iniciar sesión. Definí VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
@@ -604,14 +641,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     try {
-      const ok = await supabaseClient.rpc('admin_login', { pwd: trimmed });
-      if (ok === true) {
-        setIsAdminAuthenticated(true);
-        return true;
-      }
-      return false;
+      await auth.signIn(trimmedEmail, trimmedPassword);
+      setIsAdminAuthenticated(true);
+      return true;
     } catch (err) {
-      handleWriteError('loginAdmin', err);
+      const status = (err as any)?.status;
+      if (!status || status >= 500) {
+        // Problema de red/servidor: lo comunica el banner de conexión.
+        setCloudStatusText('⚠️ Sin conexión con la nube. Revisá tu internet e intentá de nuevo.');
+      }
+      // Credenciales inválidas o cualquier otro error -> mensaje genérico en el form.
       return false;
     }
   };
@@ -619,7 +658,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const logoutAdmin = () => {
     setIsAdminAuthenticated(false);
     try {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      auth.signOut();
     } catch {
       // ignore
     }
@@ -640,7 +679,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }): Order => {
     // Generate unique 4-digit numeric code e.g. 4821
     let code = Math.floor(1000 + Math.random() * 9000).toString();
-    const existingCodes = new Set(orders.filter((o) => o.status === 'Pendiente').map((o) => o.code));
+    const existingCodes = new Set(orders.map((o) => o.code));
     let attempts = 0;
     while (existingCodes.has(code) && attempts < 30) {
       code = Math.floor(1000 + Math.random() * 9000).toString();

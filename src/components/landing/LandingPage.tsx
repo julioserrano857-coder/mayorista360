@@ -8,9 +8,10 @@ import {
   ShieldCheck,
   AlertCircle,
   KeyRound,
-  User,
+  Mail,
   CheckCircle2
 } from 'lucide-react';
+import { ADMIN_EMAIL } from '../../lib/supabase';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -25,7 +26,7 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     isCloudConfigured
   } = useStore();
 
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -35,8 +36,8 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim()) {
-      setError('Ingresá el usuario');
+    if (!email.trim()) {
+      setError('Ingresá el email');
       return;
     }
 
@@ -48,10 +49,9 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     try {
-      const isSuccess = username.trim().toLowerCase() === 'admin' && (await loginAdmin(password));
+      const isSuccess = await loginAdmin(email, password);
       if (isSuccess) {
         setPassword('');
-        setUsername('');
         onLoginSuccess();
       } else {
         setError('Usuario o contraseña incorrectos');
@@ -142,24 +142,25 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <span className="text-xs font-bold uppercase tracking-wider">Iniciar Sesión</span>
               </div>
 
-              {/* Username Input */}
+              {/* Email Input */}
               <div>
-                <label 
+                <label
                   htmlFor="login-username"
                   className="block text-xs font-bold text-slate-300 mb-1.5"
                 >
-                  Usuario
+                  Email
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                    <User className="w-4 h-4" />
+                    <Mail className="w-4 h-4" />
                   </div>
                   <input
                     id="login-username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Usuario"
+                    type="email"
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@email.com"
                     className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700/80 focus:border-sky-500 rounded-xl text-white placeholder:text-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all font-medium"
                   />
                 </div>
@@ -180,6 +181,7 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   <input
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);

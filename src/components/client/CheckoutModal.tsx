@@ -35,6 +35,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [submittedCode, setSubmittedCode] = useState('');
   const [submittedMessage, setSubmittedMessage] = useState('');
@@ -55,11 +56,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handleSendOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Anti doble envío: un clic = un pedido
+    if (isSubmitting) return;
+
+    // Safety: el carrito no puede estar vacío
+    if (cart.length === 0) {
+      alert('Tu pedido está vacío. Agregá productos antes de enviar.');
+      return;
+    }
+
     // Safety: if there is no destination WhatsApp number configured, block the order
     if (!targetPhone) {
       alert('Todavía no se configuró un WhatsApp de destino. Avisale al dueño para que lo cargue en Configuración.');
       return;
     }
+
+    setIsSubmitting(true);
 
     // 1. Guardar el pedido en el sistema / base de datos Supabase
     const savedOrder = addOrder({
@@ -116,6 +128,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setClientName('');
     setNotes('');
     setIsSubmitted(false);
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -236,7 +249,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <button
                 id="btn-review-modify-order"
                 type="button"
-                onClick={() => setIsSubmitted(false)}
+                onClick={() => {
+                  setIsSubmitting(false);
+                  setIsSubmitted(false);
+                }}
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors touch-action-manipulation cursor-pointer"
               >
                 Modificar o revisar productos del pedido
@@ -359,7 +375,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <button
                 id="btn-confirm-send-whatsapp"
                 type="submit"
-                className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-98 order-1 sm:order-2 touch-action-manipulation cursor-pointer"
+                disabled={isSubmitting}
+                className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-98 order-1 sm:order-2 touch-action-manipulation cursor-pointer disabled:opacity-60"
               >
                 <Send className="w-4 h-4" />
                 <span>Enviar Pedido por WhatsApp</span>

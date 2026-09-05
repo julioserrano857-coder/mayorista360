@@ -104,8 +104,8 @@ export const SettingsManagement: React.FC = () => {
     e.preventDefault();
     setPasswordMsg(null);
 
-    if (newPassword.length < 4) {
-      setPasswordMsg({ type: 'error', text: 'La nueva contraseña debe tener al menos 4 caracteres.' });
+    if (newPassword.length < 6) {
+      setPasswordMsg({ type: 'error', text: 'La nueva contraseña debe tener al menos 6 caracteres.' });
       return;
     }
 

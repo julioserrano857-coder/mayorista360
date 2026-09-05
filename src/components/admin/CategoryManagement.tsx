@@ -36,17 +36,13 @@ export const CategoryManagement: React.FC = () => {
   const handleDelete = (cat: Category) => {
     const productsInCat = products.filter((p) => p.categoryId === cat.id);
     if (productsInCat.length > 0) {
-      if (
-        !window.confirm(
-          `Atención: Esta categoría contiene ${productsInCat.length} productos asignados. ¿Deseas eliminar la categoría de todos modos?`
-        )
-      ) {
-        return;
-      }
-    } else {
-      if (!window.confirm(`¿Deseas eliminar la categoría "${cat.name}"?`)) {
-        return;
-      }
+      alert(
+        `No se puede eliminar la categoría "${cat.name}": tiene ${productsInCat.length} producto(s) asignados. Movelos a otra categoría o borralos primero.`
+      );
+      return;
+    }
+    if (!window.confirm(`¿Deseas eliminar la categoría "${cat.name}"?`)) {
+      return;
     }
     deleteCategory(cat.id);
   };

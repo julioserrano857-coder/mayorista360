@@ -203,7 +203,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {/* WhatsApp direct notice */}
               <div className="text-[11px] text-slate-600 bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 flex items-center justify-between">
                 <span>Destino: <strong>{activePreventista ? activePreventista.name : (settings.companyName || 'Ventas Central')}</strong></span>
-                <span className="font-mono font-bold text-emerald-800">+{activePreventista?.whatsapp || settings.defaultWhatsApp}</span>
+                {(() => {
+                  const destPhone = activePreventista?.whatsapp || settings.defaultWhatsApp;
+                  return destPhone ? (
+                    <span className="font-mono font-bold text-emerald-800">+{destPhone}</span>
+                  ) : (
+                    <span className="font-bold text-amber-600">Sin número cargado</span>
+                  );
+                })()}
               </div>
 
               <button

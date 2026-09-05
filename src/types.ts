@@ -18,7 +18,6 @@ export interface Product {
   imageUrl: string;
   brand?: string;
   description?: string;
-  sku?: string;
 }
 
 export interface Preventista {
@@ -51,7 +50,7 @@ export interface CheckoutForm {
 
 export interface AdminCredentials {
   username: string;
-  passwordHash: string; // or plain for demo with update capability
+  passwordHash: string;
   lastUpdated?: string;
 }
 

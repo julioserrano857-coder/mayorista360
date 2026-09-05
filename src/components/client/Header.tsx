@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/20 hover:shadow-lg transition-all active:scale-95 cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span className="hidden xs:inline">Pedido</span>
+              <span className="hidden sm:inline">Pedido</span>
               {cartCount > 0 && (
                 <span className="inline-flex items-center justify-center bg-white text-orange-700 font-extrabold text-[11px] px-1.5 py-0.5 rounded-full min-w-[20px] shadow-2xs">
                   {cartCount}

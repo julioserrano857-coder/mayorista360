@@ -46,9 +46,12 @@ export const OrdersManagement: React.FC = () => {
 
   // Formatting helpers
   const formatCurrency = (val: number) => {
-    return `${settings.currencySymbol || '$'}${val.toLocaleString('es-AR', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+    const value = Math.round(val * 100) / 100;
+    const hasCents = Math.abs(value % 1) > 0.001;
+    const fractionDigits = hasCents ? 2 : 0;
+    return `${settings.currencySymbol || '$'}${value.toLocaleString('es-AR', {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits
     })}`;
   };
 
@@ -610,6 +613,32 @@ export const OrdersManagement: React.FC = () => {
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           <span>Pasar a Pendiente</span>
+                        </button>
+                      )}
+
+                      {(order.status === 'Pendiente' || order.status === 'Entregado') && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Cancelar el pedido #${order.code}?`)) {
+                              updateOrderStatus(order.id, 'Cancelado');
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-rose-200"
+                          title="Cancelar pedido"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Cancelar</span>
+                        </button>
+                      )}
+
+                      {order.status === 'Cancelado' && (
+                        <button
+                          onClick={() => updateOrderStatus(order.id, 'Pendiente')}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200"
+                          title="Reactivar pedido cancelado"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reactivar</span>
                         </button>
                       )}
 

@@ -56,27 +56,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding })
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left: Brand & Title */}
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">
                 📦
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-base sm:text-lg tracking-tight text-white">
+                  <span className="font-extrabold text-base sm:text-lg tracking-tight text-white truncate">
                     Panel de Administración
                   </span>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded font-bold uppercase tracking-wider shrink-0">
                     Mayorista
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 leading-tight">
+                <p className="text-[11px] text-slate-400 leading-tight truncate">
                   {settings.companyName}
                 </p>
               </div>
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button
                 id="btn-admin-logout"
                 onClick={handleLogout}
