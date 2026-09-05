@@ -832,7 +832,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setOrders((prev) => [newOrder, ...prev]);
     if (isSupabaseConfigured()) {
-      supabaseClient.upsert('orders', toDbOrder(newOrder)).catch((err) => handleWriteError('addOrder', err));
+      supabaseClient.insert('orders', toDbOrder(newOrder)).catch((err) => handleWriteError('addOrder', err));
     }
     return newOrder;
   };

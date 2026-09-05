@@ -363,6 +363,28 @@ export const supabaseClient = {
     }
   },
 
+  // INSERT puro: POST sin "resolution=merge-duplicates". No requiere permiso
+  // UPDATE (los roles anónimos solo tienen INSERT en algunas tablas, p.ej.
+  // orders al crear un pedido desde el catálogo público).
+  async insert(table: string, data: any | any[]): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    const { url } = getSupabaseConfig();
+    try {
+      const response = await fetch(`${url}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: restHeaders(),
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        throw await toApiError(response, `No se pudo insertar en ${table} (${response.status}).`);
+      }
+      return true;
+    } catch (err) {
+      console.warn(`[Supabase Insert Error] ${table}:`, err);
+      throw err;
+    }
+  },
+
   async delete(table: string, matchColumn: string, matchValue: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     const { url } = getSupabaseConfig();
