@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { OrdersManagement } from './OrdersManagement';
 import { ProductManagement } from './ProductManagement';
@@ -23,18 +23,30 @@ interface AdminDashboardProps {
 type AdminTab = 'orders' | 'products' | 'categories' | 'preventistas' | 'settings';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding }) => {
-  const { logoutAdmin, settings, products, preventistas, categories, orders } = useStore();
+  const { logoutAdmin, settings, products, preventistas, categories, orders, newOrdersCount, markOrdersAsSeen } = useStore();
   const [activeTab, setActiveTab] = useState<AdminTab>('orders');
 
   const pendingOrdersCount = orders.filter((o) => o.status === 'Pendiente').length;
+
+  // Apenas el admin mira la pestaña de pedidos, los "nuevos" quedan vistos.
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      markOrdersAsSeen();
+    }
+  }, [activeTab, newOrdersCount, markOrdersAsSeen]);
 
   const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; badge?: number; highlightBadge?: boolean }> = [
     {
       id: 'orders',
       label: 'Pedidos Recibidos',
       icon: <PackageCheck className="w-4 h-4" />,
-      badge: pendingOrdersCount > 0 ? pendingOrdersCount : orders.length,
-      highlightBadge: pendingOrdersCount > 0
+      badge:
+        newOrdersCount > 0
+          ? newOrdersCount
+          : pendingOrdersCount > 0
+          ? pendingOrdersCount
+          : orders.length,
+      highlightBadge: newOrdersCount > 0 || pendingOrdersCount > 0
     },
     { id: 'products', label: 'Productos y Precios', icon: <Package className="w-4 h-4" />, badge: products.length },
     { id: 'categories', label: 'Categorías', icon: <Layers className="w-4 h-4" />, badge: categories.length },

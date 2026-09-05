@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Category,
   Product,
@@ -100,6 +100,8 @@ interface StoreContextType {
   isInitialLoading: boolean;
   cloudStatusText: string;
   refreshFromCloud: () => Promise<boolean>;
+  newOrdersCount: number;
+  markOrdersAsSeen: () => void;
   exportBackupJson: () => string;
   importBackupJson: (jsonString: string) => Promise<boolean>;
 }
@@ -135,6 +137,38 @@ function readSessionFromDevice(): boolean {
   return getSession() !== null;
 }
 
+// Sonido corto de "llegó un pedido nuevo" (2 tonos, sin archivos externos).
+function playNewOrderChime() {
+  try {
+    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const tone = (freq: number, delay: number, dur: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + dur);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + dur + 0.05);
+    };
+    tone(880, 0, 0.18);
+    tone(1318.51, 0.2, 0.3);
+    window.setTimeout(() => {
+      ctx.close().catch(() => {});
+    }, 1600);
+  } catch {
+    // Sin audio disponible: el aviso visual sigue funcionando.
+  }
+}
+
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // All catalog data starts EMPTY; it is loaded from Supabase on mount.
   const [products, setProducts] = useState<Product[]>([]);
@@ -142,6 +176,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [preventistas, setPreventistas] = useState<Preventista[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(INITIAL_SETTINGS);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+
+  // Refs auxiliares para el vigilante de pedidos nuevos (polling liviano).
+  const ordersRef = useRef<Order[]>([]);
+  const lastSeenOrderDateRef = useRef<string | null>(null);
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(readSessionFromDevice);
 
@@ -241,26 +280,100 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Auto-clean "ghost" orders: pending orders older than 7 days that were
   // never confirmed (the client tapped send but the preventista never
   // forwarded/received it). Runs whenever the admin opens the panel.
+  // También refresca todo con la sesión del admin al loguear (los pedidos
+  // solo se ven con su token, no con la anon key).
   useEffect(() => {
     if (!isAdminAuthenticated || !isSupabaseConfigured()) return;
 
-    const cleanup = async () => {
+    let cancelled = false;
+    const syncAfterLogin = async () => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       try {
         const ok = await supabaseClient.deleteWhere('orders', {
           status: 'eq.Pendiente',
           created_at: `lt.${sevenDaysAgo}`
         });
-        if (ok) {
+        if (ok && !cancelled) {
           // Remove them from local state too
           setOrders((prev) => prev.filter((o) => o.status !== 'Pendiente' || new Date(o.createdAt) >= new Date(sevenDaysAgo)));
         }
       } catch (err) {
         console.warn('[Auto-clean ghost orders]', err);
       }
+      if (!cancelled) {
+        await refreshFromCloud();
+      }
     };
 
-    cleanup();
+    syncAfterLogin();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdminAuthenticated, refreshFromCloud]);
+
+  // Mantener refs al día para el vigilante de pedidos nuevos.
+  useEffect(() => {
+    ordersRef.current = orders;
+    if (orders.length > 0) {
+      const maxDate = orders.reduce((m, o) => (o.createdAt > m ? o.createdAt : m), orders[0].createdAt);
+      lastSeenOrderDateRef.current = maxDate;
+    }
+  }, [orders]);
+
+  // Vigilante de pedidos nuevos: mientras el admin tiene el panel abierto,
+  // consulta cada 15s si llegó un pedido y lo agrega solo (con aviso sonoro
+  // y contador "nuevos" en el menú). Sin recargar la página.
+  useEffect(() => {
+    if (!isAdminAuthenticated || !isSupabaseConfigured()) return;
+
+    let active = true;
+    const poll = async () => {
+      const since = lastSeenOrderDateRef.current;
+      if (!since) return; // todavía no se cargaron pedidos (recién arranca)
+      try {
+        const rows = await supabaseClient.query('orders', {
+          select: 'id,code,created_at,preventista_id,preventista_name,preventista_whatsapp,client_name,notes,items,total_amount,total_units,status',
+          filter: `created_at=gt.${since}`,
+          order: 'created_at.desc'
+        });
+        if (!active || !Array.isArray(rows) || rows.length === 0) return;
+        setIsCloudConnected(true);
+
+        const current = ordersRef.current;
+        const existingIds = new Set(current.map((o) => o.id));
+        const incoming = rows.map(fromDbOrder).filter((o) => !existingIds.has(o.id));
+        if (incoming.length === 0) return;
+
+        const merged = [...incoming, ...current];
+        ordersRef.current = merged;
+        setOrders(merged);
+        const maxDate = merged.reduce((m, o) => (o.createdAt > m ? o.createdAt : m), merged[0].createdAt);
+        lastSeenOrderDateRef.current = maxDate;
+
+        setNewOrdersCount((c) => c + incoming.length);
+        playNewOrderChime();
+      } catch (err: any) {
+        if (err?.status === 401 || err?.status === 403) {
+          // Sesión vencida: fuera del panel.
+          if (active) {
+            setIsAdminAuthenticated(false);
+            try {
+              auth.signOut();
+            } catch {
+              // ignore
+            }
+          }
+        }
+        // Otros errores de red: silenciosos, el próximo tick reintenta.
+      }
+    };
+
+    poll();
+    const intervalId = window.setInterval(poll, 15000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
   }, [isAdminAuthenticated]);
 
   const handleWriteError = (context: string, err: any) => {
@@ -664,6 +777,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const markOrdersAsSeen = useCallback(() => {
+    setNewOrdersCount(0);
+  }, []);
+
   // ===================================================================
   // ORDERS METHODS
   // ===================================================================
@@ -908,6 +1025,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isInitialLoading,
         cloudStatusText,
         refreshFromCloud,
+        newOrdersCount,
+        markOrdersAsSeen,
         exportBackupJson,
         importBackupJson
       }}
