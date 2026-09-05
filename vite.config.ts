@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'NutriMayorista Pet Food',
-          short_name: 'NutriMayor',
-          description: 'Catálogo digital mayorista de productos y alimentos para mascotas con pedidos directos por WhatsApp.',
+          name: 'Mayorista360',
+          short_name: 'Mayorista360',
+          description: 'Catálogo digital mayorista multirrubro con pedidos directos por WhatsApp a tu preventista.',
           theme_color: '#059669',
           background_color: '#ffffff',
           display: 'standalone',

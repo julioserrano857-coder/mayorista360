@@ -105,7 +105,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
             </div>
 
             <h3 className="text-base font-extrabold text-slate-900">
-              Instalar NutriMayorista
+              Instalar esta aplicación
             </h3>
             <p className="text-xs text-slate-500 mt-1">
               Accede al catálogo mayorista sin abrir el navegador, directo desde tu pantalla de inicio como una aplicación nativa.

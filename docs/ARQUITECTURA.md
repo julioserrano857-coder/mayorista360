@@ -25,7 +25,7 @@ App (StoreProvider)
 │   └── OfflineIndicator
 │
 └── [viewMode === 'catalog'] (Vista de cliente)
-    ├── Header (Búsqueda, filtro especies, selector de stock, badge preventista, botón PWA, botón carrito)
+    ├── Header (Búsqueda, selector de stock, badge preventista, botón PWA, botón carrito)
     ├── PreventistaBanner (Canal actual o preventista asignado + WhatsApp)
     ├── CategoryBar (Barra desplazable de categorías)
     ├── ProductCard (Cuadrícula o lista rápida de productos + agregado al carrito)

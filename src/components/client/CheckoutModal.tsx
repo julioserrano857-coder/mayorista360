@@ -55,6 +55,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handleSendOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Safety: if there is no destination WhatsApp number configured, block the order
+    if (!targetPhone) {
+      alert('Todavía no se configuró un WhatsApp de destino. Avisale al dueño para que lo cargue en Configuración.');
+      return;
+    }
+
     // 1. Guardar el pedido en el sistema / base de datos Supabase
     const savedOrder = addOrder({
       clientName: clientName.trim() || undefined,
@@ -307,7 +313,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Ej: Pet Shop Huellitas / Juan Pérez"
+                placeholder="Ej: Almacén El Centro / Juan Pérez"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-base sm:text-xs text-slate-900 focus:outline-none focus:border-emerald-600 transition-all placeholder:text-slate-400"
               />
             </div>

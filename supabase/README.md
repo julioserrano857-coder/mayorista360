@@ -1,6 +1,6 @@
 # 🗄️ Guía de Conexión con Supabase
 
-Esta carpeta contiene los scripts SQL listos para crear y poblar la base de datos de **NutriMayorista Pet Food** en Supabase.
+Esta carpeta contiene los scripts SQL listos para crear la base de datos de **Mayorista360** en Supabase.
 
 ---
 
@@ -9,7 +9,7 @@ Esta carpeta contiene los scripts SQL listos para crear y poblar la base de dato
 ### 1. Crear tu proyecto en Supabase
 1. Ingresa a [https://supabase.com](https://supabase.com) e inicia sesión (con tu cuenta de GitHub o email).
 2. Haz clic en **"New Project"**.
-3. Elige un nombre para tu proyecto (ej: `nutrimayorista-db`) y una contraseña para la base de datos.
+3. Elige un nombre para tu proyecto (ej: `mayorista360-db`) y una contraseña para la base de datos.
 4. Selecciona la región más cercana (ej: `South America (São Paulo)`).
 5. Haz clic en **"Create new project"** (tarda aproximadamente 1 a 2 minutos).
 
@@ -28,7 +28,7 @@ Esta carpeta contiene los scripts SQL listos para crear y poblar la base de dato
 1. En el mismo **SQL Editor**, crea otra "New query".
 2. Copia y pega el contenido del archivo `supabase/seed.sql`.
 3. Presiona **"Run"**.
-4. Esto precargará los productos mayoristas de ejemplo, preventistas iniciales y categorías.
+4. Nota: este proyecto arranca con el catálogo **en blanco** a propósito; el dueño carga sus productos, preventistas y categorías desde el Panel de Administración. `seed.sql` hoy no inserta nada.
 
 ---
 

@@ -1,18 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="100" fill="#059669"/>
-  <circle cx="256" cy="256" r="210" fill="#047857" opacity="0.4"/>
-  <!-- Paw Print Icon and Wholesale Package -->
-  <g fill="#ffffff">
-    <!-- Big central pad -->
-    <path d="M256 260 c-45 0 -80 32 -80 72 c0 32 30 52 80 52 c50 0 80 -20 80 -52 c0 -40 -35 -72 -80 -72 z" />
-    <!-- 4 Toe pads -->
-    <ellipse cx="175" cy="225" rx="28" ry="38" transform="rotate(-18 175 225)" />
-    <ellipse cx="230" cy="180" rx="27" ry="38" transform="rotate(-6 230 180)" />
-    <ellipse cx="282" cy="180" rx="27" ry="38" transform="rotate(6 282 180)" />
-    <ellipse cx="337" cy="225" rx="28" ry="38" transform="rotate(18 337 225)" />
-    <!-- Top badge / star for wholesale quality -->
-    <path d="M256 95 L263 116 L285 116 L267 129 L274 150 L256 137 L238 150 L245 129 L227 116 L249 116 Z" fill="#fde047" />
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+  <!-- Inner glow circle -->
+  <circle cx="256" cy="256" r="200" fill="#047857" opacity="0.25"/>
+  <!-- Wholesale package (open box) -->
+  <g>
+    <!-- shadow -->
+    <ellipse cx="256" cy="436" rx="150" ry="16" fill="#022c22" opacity="0.25"/>
+    <!-- top face -->
+    <path d="M256 104 L404 186 L256 268 L108 186 Z" fill="#ffffff"/>
+    <!-- left face -->
+    <path d="M108 186 L256 268 L256 428 L108 346 Z" fill="#e7f7f0"/>
+    <!-- right face -->
+    <path d="M404 186 L256 268 L256 428 L404 346 Z" fill="#cdeede"/>
+    <!-- tape line on top -->
+    <path d="M256 104 L256 268" stroke="#a7f3d0" stroke-width="10"/>
+    <path d="M256 104 L256 190" stroke="#059669" stroke-width="10" opacity="0.5"/>
   </g>
-  <!-- Text banner bottom -->
-  <text x="256" y="440" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="34" fill="#ffffff" letter-spacing="3">MAYORISTA</text>
 </svg>

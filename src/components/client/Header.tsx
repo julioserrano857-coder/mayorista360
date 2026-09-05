@@ -75,7 +75,9 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
                     <span className="text-slate-500">Atención:</span>
-                    <strong className="font-bold text-slate-900">Ventas Central</strong>
+                    <strong className="font-bold text-slate-900 truncate max-w-[140px] sm:max-w-none">
+                      {settings.companyName || 'Ventas Central'}
+                    </strong>
                   </span>
                 )}
               </div>

@@ -10,7 +10,7 @@ import { ProductQuickViewModal } from './components/client/ProductQuickViewModal
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { LandingPage } from './components/landing/LandingPage';
 import { OfflineIndicator } from './components/common/OfflineIndicator';
-import { Species, Product } from './types';
+import { Product } from './types';
 import { formatCurrency } from './utils/whatsapp';
 import {
   ShoppingBag,
@@ -36,7 +36,8 @@ function MainApp() {
     activePreventista,
     cartCount,
     cartTotal,
-    isAdminAuthenticated
+    isAdminAuthenticated,
+    isInitialLoading
   } = useStore();
 
   // Navigation & View Mode State: 'landing' (default portal & login) | 'catalog' (client store) | 'admin' (control panel)
@@ -124,6 +125,23 @@ function MainApp() {
   const visibleProducts = useMemo(() => {
     return filteredProducts.slice(0, visibleCount);
   }, [filteredProducts, visibleCount]);
+
+  // 0. Initial loading state while fetching from Supabase (avoid empty flash)
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center font-sans">
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-teal-400 flex items-center justify-center text-white font-black text-3xl shadow-lg">
+            📦
+          </div>
+          <div className="text-sm font-bold text-slate-600">Cargando catálogo...</div>
+          <div className="flex justify-center">
+            <div className="w-6 h-6 border-2 border-slate-300 border-t-sky-600 rounded-full animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 1. Login Page View (Simple dedicated login screen to enter the admin panel)
   if (viewMode === 'landing') {
@@ -394,7 +412,7 @@ function MainApp() {
               </span>
             </div>
             <p className="text-slate-500 leading-relaxed max-w-sm">
-              Distribución mayorista multirrubro directa: alimentos para mascotas, cigarrillos, golosinas, bebidas, snacks y artículos para kioscos, veterinarias y comercios.
+              Distribución mayorista multirrubro directa con pedidos por WhatsApp a tu preventista asignado.
             </p>
           </div>
 

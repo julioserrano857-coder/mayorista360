@@ -1,6 +1,6 @@
 {
-  "name": "Catálogo Mayorista de Mascotas",
-  "description": "Catálogo digital mayorista multirrubro (alimentos para mascotas, cigarrillos, golosinas, bebidas y kiosco) con pedidos directos a preventistas por WhatsApp y panel de administración.",
+  "name": "Mayorista360",
+  "description": "Catálogo digital mayorista multirrubro con pedidos directos a preventistas por WhatsApp y panel de administración.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

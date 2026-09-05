@@ -1,6 +1,6 @@
-# Catálogo Mayorista de Mascotas & Sistema de Preventistas (PWA)
+# Catálogo Mayorista & Sistema de Preventistas (PWA)
 
-Sistema web y aplicación progresiva (PWA) para distribución mayorista de alimentos y accesorios para mascotas. Permite a comercios (pet shops, veterinarias, forrajerías) armar pedidos por bulto cerrado y enviarlos directamente por WhatsApp al preventista asignado o a la central de ventas, con generación de código de seguimiento de 4 dígitos y panel de control administrativo.
+Sistema web y aplicación progresiva (PWA) para distribución mayorista multirrubro. Permite a comercios armar pedidos por bulto cerrado y enviarlos directamente por WhatsApp al preventista asignado o a la central de ventas, con generación de código de seguimiento de 4 dígitos y panel de control administrativo.
 
 ---
 
@@ -11,9 +11,9 @@ Sistema web y aplicación progresiva (PWA) para distribución mayorista de alime
   - *Cuadrícula*: Vista de 2 columnas en celulares y 3-4 columnas en computadoras.
   - *Lista Rápida*: Vista compacta optimizada para compras rápidas por bulto cerrado.
 - **Buscador Inteligente en Tiempo Real**: Filtrado simultáneo por nombre, marca, presentación/peso, descripción y SKU.
-- **Filtros Dinámicos**: Por especie (🐶 Perros, 🐱 Gatos, 🦜 Otras Especies), por categoría y filtro de *Solo Disponibles* (con stock).
+- **Filtros Dinámicos**: Por categoría y filtro de *Solo Disponibles* (con stock).
 - **Control de Cantidades y Stock**: Validación inmediata que previene agregar productos sin stock.
-- **Modal de Vista Rápida**: Detalle del producto con ingredientes, análisis garantizado y peso.
+- **Modal de Vista Rápida**: Detalle del producto con presentación, descripción y precio.
 
 ### 2. 📲 Enrutamiento por Preventistas & WhatsApp
 - **Enlaces Únicos por Preventista**: Cada preventista cuenta con una URL personalizada (ej: `?view=pedidos&ref=juan_perez`) y código QR descargable.
@@ -31,7 +31,7 @@ Sistema web y aplicación progresiva (PWA) para distribución mayorista de alime
   - Ciclo de vida: cambiar estado (*Pendiente*, *Entregado*, *Cancelado*) y botón para limpiar entregados.
 - **Gestión de Productos y Precios**:
   - Edición rápida de precios "in-line" directamente desde la tabla con actualización centralizada en tiempo real.
-  - Creación, modificación y borrado de productos con categorías, especies, SKU y fotos.
+  - Creación, modificación y borrado de productos con categorías, SKU y fotos.
   - Alternador rápido de disponibilidad de stock (*Disponible* / *Sin Stock*).
 - **Gestión de Categorías**:
   - Reordenamiento visual de categorías para definir su prioridad en el catálogo.

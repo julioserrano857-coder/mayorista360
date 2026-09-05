@@ -4,27 +4,17 @@ import {
   Product,
   Preventista,
   StoreSettings,
-  AdminCredentials,
   CartItem,
   ProductStatus,
   Order,
   OrderStatus,
   OrderItem
 } from '../types';
-import {
-  INITIAL_CATEGORIES,
-  INITIAL_PRODUCTS,
-  INITIAL_PREVENTISTAS,
-  INITIAL_SETTINGS,
-  INITIAL_ADMIN,
-  DEMO_CATEGORIES,
-  DEMO_PRODUCTS
-} from '../data/initialData';
+import { INITIAL_SETTINGS } from '../data/initialData';
 import { generateSlug, cleanWhatsAppNumber } from '../utils/whatsapp';
 import {
   supabaseClient,
   isSupabaseConfigured,
-  setCustomSupabaseConfig,
   toDbProduct,
   fromDbProduct,
   toDbCategory,
@@ -38,7 +28,7 @@ import {
 } from '../lib/supabase';
 
 interface StoreContextType {
-  // Catalog Data
+  // Catalog Data (single source of truth: Supabase)
   products: Product[];
   categories: Category[];
   preventistas: Preventista[];
@@ -46,7 +36,7 @@ interface StoreContextType {
   activePreventista: Preventista | null;
   activeRef: string | null;
 
-  // Cart
+  // Cart (kept in the device ONLY as a draft so a reload doesn't lose it)
   cart: CartItem[];
   cartCount: number;
   cartTotal: number;
@@ -93,133 +83,81 @@ interface StoreContextType {
 
   // Settings & Security
   updateSettings: (updates: Partial<StoreSettings>) => void;
-  updateAdminPassword: (newPassword: string) => boolean;
+  updateAdminPassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   isAdminAuthenticated: boolean;
-  loginAdmin: (password: string) => boolean;
+  loginAdmin: (password: string) => Promise<boolean>;
   logoutAdmin: () => void;
-  resetAllDataToDefaults: () => void;
-  clearAllCatalogData: () => void;
-  loadDemoData: () => void;
+  resetAllDataToDefaults: () => Promise<void>;
+  clearAllCatalogData: () => Promise<void>;
 
-  // Cloud Sync & Persistence (Supabase + LocalStorage)
+  // Cloud Sync Status (Supabase = source of truth)
+  isCloudConfigured: boolean;
   isCloudConnected: boolean;
   isCloudSyncing: boolean;
+  isInitialLoading: boolean;
   cloudStatusText: string;
   refreshFromCloud: () => Promise<boolean>;
-  syncLocalToCloud: () => Promise<{ success: boolean; message: string }>;
-  saveCloudCredentials: (url: string, key: string) => Promise<{ success: boolean; message: string }>;
   exportBackupJson: () => string;
-  importBackupJson: (jsonString: string) => boolean;
+  importBackupJson: (jsonString: string) => Promise<boolean>;
 }
 
-const STORAGE_KEYS = {
-  PRODUCTS: 'nutrimayorista_products_v1',
-  CATEGORIES: 'nutrimayorista_categories_v1',
-  PREVENTISTAS: 'nutrimayorista_preventistas_v1',
-  SETTINGS: 'nutrimayorista_settings_v1',
-  ADMIN_AUTH: 'nutrimayorista_admin_auth_v1',
-  ADMIN_SESSION: 'nutrimayorista_admin_session_v1',
-  CART: 'nutrimayorista_cart_v1',
-  CART_TIMESTAMP: 'nutrimayorista_cart_timestamp_v1',
-  ORDERS: 'nutrimayorista_orders_v1'
-};
-
-// Carrito expira automáticamente tras 24 horas de inactividad
+// Cart draft lives in localStorage (the ONLY approved local exception) and expires after 24h.
+const CART_STORAGE_KEY = 'mayorista360_cart_v1';
+const CART_TIMESTAMP_KEY = 'mayorista360_cart_timestamp_v1';
+const SESSION_STORAGE_KEY = 'mayorista360_admin_session_v1';
 const CART_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize States from localStorage or default seed data
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-    } catch {
-      return INITIAL_PRODUCTS;
-    }
-  });
-
-  const [categories, setCategories] = useState<Category[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
-    } catch {
-      return INITIAL_CATEGORIES;
-    }
-  });
-
-  const [preventistas, setPreventistas] = useState<Preventista[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PREVENTISTAS);
-      return saved ? JSON.parse(saved) : INITIAL_PREVENTISTAS;
-    } catch {
-      return INITIAL_PREVENTISTAS;
-    }
-  });
-
-  const [settings, setSettings] = useState<StoreSettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-    } catch {
-      return INITIAL_SETTINGS;
-    }
-  });
-
-  const [adminCreds, setAdminCreds] = useState<AdminCredentials>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_AUTH);
-      return saved ? JSON.parse(saved) : INITIAL_ADMIN;
-    } catch {
-      return INITIAL_ADMIN;
-    }
-  });
-
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    try {
-      const session = localStorage.getItem(STORAGE_KEYS.ADMIN_SESSION);
-      return session === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CART);
-      const timestamp = localStorage.getItem(STORAGE_KEYS.CART_TIMESTAMP);
-
-      if (saved && timestamp) {
-        const savedTime = parseInt(timestamp, 10);
-        if (!isNaN(savedTime) && Date.now() - savedTime > CART_EXPIRATION_MS) {
-          localStorage.removeItem(STORAGE_KEYS.CART);
-          localStorage.removeItem(STORAGE_KEYS.CART_TIMESTAMP);
-          return [];
-        }
+function readCartFromDevice(): CartItem[] {
+  try {
+    const saved = localStorage.getItem(CART_STORAGE_KEY);
+    const timestamp = localStorage.getItem(CART_TIMESTAMP_KEY);
+    if (saved && timestamp) {
+      const savedTime = parseInt(timestamp, 10);
+      if (!isNaN(savedTime) && Date.now() - savedTime > CART_EXPIRATION_MS) {
+        localStorage.removeItem(CART_STORAGE_KEY);
+        localStorage.removeItem(CART_TIMESTAMP_KEY);
+        return [];
       }
-
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
     }
-  });
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+function readSessionFromDevice(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // All catalog data starts EMPTY; it is loaded from Supabase on mount.
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [preventistas, setPreventistas] = useState<Preventista[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>(INITIAL_SETTINGS);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(readSessionFromDevice);
+
+  // Cart: only persisted locally as a draft so a page reload doesn't lose the order.
+  const [cart, setCart] = useState<CartItem[]>(readCartFromDevice);
 
   const [activeRef, setActiveRef] = useState<string | null>(null);
 
   // Cloud synchronization status
+  const isCloudConfigured = isSupabaseConfigured();
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
-  const [cloudStatusText, setCloudStatusText] = useState<string>('Modo Local (Offline-Ready)');
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [cloudStatusText, setCloudStatusText] = useState<string>(() =>
+    isSupabaseConfigured() ? 'Conectando con Supabase...' : 'Supabase no configurado (definir VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY)'
+  );
 
   // Parse URL query parameter 'ref' on load and when URL changes
   useEffect(() => {
@@ -228,55 +166,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const ref = params.get('ref');
       setActiveRef(ref ? ref.trim() : null);
     };
-
     parseRef();
     window.addEventListener('popstate', parseRef);
     return () => window.removeEventListener('popstate', parseRef);
   }, []);
 
-  // Save to LocalStorage whenever state changes
+  // Persist cart draft on device (approved exception) — session persists per browser session
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PREVENTISTAS, JSON.stringify(preventistas));
-  }, [preventistas]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
-  }, [settings]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, JSON.stringify(adminCreds));
-  }, [adminCreds]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, String(isAdminAuthenticated));
-  }, [isAdminAuthenticated]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
-    if (cart.length > 0) {
-      localStorage.setItem(STORAGE_KEYS.CART_TIMESTAMP, String(Date.now()));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CART_TIMESTAMP);
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+      if (cart.length > 0) {
+        localStorage.setItem(CART_TIMESTAMP_KEY, String(Date.now()));
+      } else {
+        localStorage.removeItem(CART_TIMESTAMP_KEY);
+      }
+    } catch {
+      // ignore
     }
   }, [cart]);
 
-  // Load from Supabase on mount if configured
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, String(isAdminAuthenticated));
+    } catch {
+      // ignore
+    }
+  }, [isAdminAuthenticated]);
+
+  // ===================================================================
+  // SUPABASE: single source of truth. Pull everything on mount.
+  // ===================================================================
   const refreshFromCloud = useCallback(async (): Promise<boolean> => {
     if (!isSupabaseConfigured()) {
       setIsCloudConnected(false);
-      setCloudStatusText('Modo Local (Listo para conectar)');
+      setCloudStatusText('Supabase no configurado (definir VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY)');
+      setIsInitialLoading(false);
       return false;
     }
 
@@ -292,139 +216,40 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         supabaseClient.query('orders', { order: 'created_at.desc' })
       ]);
 
-      let hasCloudData = false;
-
-      if (Array.isArray(dbCats) && dbCats.length > 0) {
-        setCategories(dbCats.map(fromDbCategory));
-        hasCloudData = true;
-      }
-
-      if (Array.isArray(dbProds) && dbProds.length > 0) {
-        setProducts(dbProds.map(fromDbProduct));
-        hasCloudData = true;
-      }
-
-      if (Array.isArray(dbPrevs) && dbPrevs.length > 0) {
-        setPreventistas(dbPrevs.map(fromDbPreventista));
-        hasCloudData = true;
-      }
+      setCategories(Array.isArray(dbCats) ? dbCats.map(fromDbCategory) : []);
+      setProducts(Array.isArray(dbProds) ? dbProds.map(fromDbProduct) : []);
+      setPreventistas(Array.isArray(dbPrevs) ? dbPrevs.map(fromDbPreventista) : []);
+      setOrders(Array.isArray(dbOrders) ? dbOrders.map(fromDbOrder) : []);
 
       if (Array.isArray(dbSettings) && dbSettings.length > 0) {
         setSettings(fromDbSettings(dbSettings[0]));
-        hasCloudData = true;
-      }
-
-      if (Array.isArray(dbOrders) && dbOrders.length > 0) {
-        setOrders(dbOrders.map(fromDbOrder));
-        hasCloudData = true;
+      } else {
+        setSettings(INITIAL_SETTINGS);
       }
 
       setIsCloudConnected(true);
-      setCloudStatusText(hasCloudData ? '☁️ Conectado y Sincronizado' : '☁️ Conectado a Supabase (tablas vacías)');
+      setCloudStatusText('☁️ Conectado a Supabase');
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.warn('[Cloud Sync Error]', err);
       setIsCloudConnected(false);
-      setCloudStatusText('Error al conectar con Supabase (usando datos locales)');
+      setCloudStatusText('⚠️ Sin conexión: no se pudo cargar desde Supabase. Revisá tu internet.');
       return false;
     } finally {
       setIsCloudSyncing(false);
+      setIsInitialLoading(false);
     }
   }, []);
 
+  // Initial load: Supabase is the source of truth
   useEffect(() => {
     refreshFromCloud();
   }, [refreshFromCloud]);
 
-  // Push all local data to Supabase (Useful when first initializing or restoring)
-  const syncLocalToCloud = async (): Promise<{ success: boolean; message: string }> => {
-    if (!isSupabaseConfigured()) {
-      return { success: false, message: 'Supabase no está configurado aún.' };
-    }
-
-    setIsCloudSyncing(true);
-    setCloudStatusText('Subiendo datos a Supabase...');
-
-    try {
-      const catRows = categories.map(toDbCategory);
-      const prodRows = products.map(toDbProduct);
-      const prevRows = preventistas.map(toDbPreventista);
-      const setRow = toDbSettings(settings);
-      const orderRows = orders.map(toDbOrder);
-
-      const [okCats, okProds, okPrevs, okSettings, okOrders] = await Promise.all([
-        supabaseClient.upsert('categories', catRows),
-        supabaseClient.upsert('products', prodRows),
-        supabaseClient.upsert('preventistas', prevRows),
-        supabaseClient.upsert('store_settings', setRow),
-        orderRows.length > 0 ? supabaseClient.upsert('orders', orderRows) : Promise.resolve(true)
-      ]);
-
-      if (okCats && okProds && okPrevs && okSettings && okOrders) {
-        setIsCloudConnected(true);
-        setCloudStatusText('☁️ Catálogo y pedidos sincronizados con Supabase');
-        return { success: true, message: '¡Datos y pedidos subidos y sincronizados correctamente en Supabase!' };
-      } else {
-        return {
-          success: false,
-          message: 'Algunas tablas no pudieron actualizarse. Verifica las políticas RLS y tablas en Supabase.'
-        };
-      }
-    } catch (err: any) {
-      return { success: false, message: `Error al sincronizar: ${err?.message || 'Error de red'}` };
-    } finally {
-      setIsCloudSyncing(false);
-    }
-  };
-
-  // Configure custom credentials from UI
-  const saveCloudCredentials = async (url: string, key: string): Promise<{ success: boolean; message: string }> => {
-    const trimmedUrl = url.trim();
-    const trimmedKey = key.trim();
-
-    if (!trimmedUrl && !trimmedKey) {
-      setCustomSupabaseConfig('', '');
-      setIsCloudConnected(false);
-      setCloudStatusText('Modo Local');
-      return { success: true, message: 'Credenciales eliminadas. El sistema volvió al modo local.' };
-    }
-
-    const test = await supabaseClient.testConnection(trimmedUrl, trimmedKey);
-    if (!test.success) {
-      return test;
-    }
-
-    setCustomSupabaseConfig(trimmedUrl, trimmedKey);
-    await refreshFromCloud();
-    return { success: true, message: '¡Conectado exitosamente con tu base de datos de Supabase!' };
-  };
-
-  // JSON Backup / Restore
-  const exportBackupJson = (): string => {
-    const backup = {
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      products,
-      categories,
-      preventistas,
-      settings,
-      orders
-    };
-    return JSON.stringify(backup, null, 2);
-  };
-
-  const importBackupJson = (jsonString: string): boolean => {
-    try {
-      const data = JSON.parse(jsonString);
-      if (Array.isArray(data.products)) setProducts(data.products);
-      if (Array.isArray(data.categories)) setCategories(data.categories);
-      if (Array.isArray(data.preventistas)) setPreventistas(data.preventistas);
-      if (Array.isArray(data.orders)) setOrders(data.orders);
-      if (data.settings && typeof data.settings === 'object') setSettings(data.settings);
-      return true;
-    } catch {
-      return false;
-    }
+  const handleWriteError = (context: string, err: any) => {
+    console.warn(`[Supabase Write Error] ${context}`, err);
+    setIsCloudConnected(false);
+    setCloudStatusText('⚠️ Sin conexión: el cambio no se guardó en la nube. Revisá tu internet.');
   };
 
   // Resolve Active Preventista from slug or name
@@ -441,8 +266,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return found || null;
   }, [activeRef, preventistas]);
 
-  // Keep cart item product data in sync
+  // Keep cart item product data in sync with catalog (from Supabase)
+  // Only run after the first cloud load completes, so we never wipe the
+  // saved cart just because products haven't arrived yet.
   useEffect(() => {
+    if (isInitialLoading) return;
     setCart((prevCart) => {
       let changed = false;
       const updated = prevCart
@@ -470,16 +298,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return changed ? updated : prevCart;
     });
-  }, [products]);
+  }, [products, isInitialLoading]);
 
   // Cart Computations
-  const cartCount = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
-  }, [cart]);
-
-  const cartTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  }, [cart]);
+  const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0), [cart]);
 
   // Cart Methods
   const addToCart = (product: Product, quantity = 1) => {
@@ -488,9 +311,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
+          item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
       return [...prev, { product, quantity: Math.max(1, quantity) }];
@@ -502,11 +323,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       removeFromCart(productId);
       return;
     }
-    setCart((prev) =>
-      prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
-    );
+    setCart((prev) => prev.map((item) => (item.product.id === productId ? { ...item, quantity } : item)));
   };
 
   const removeFromCart = (productId: string) => {
@@ -516,27 +333,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCart = () => {
     setCart([]);
     try {
-      localStorage.removeItem(STORAGE_KEYS.CART);
-      localStorage.removeItem(STORAGE_KEYS.CART_TIMESTAMP);
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(CART_TIMESTAMP_KEY);
     } catch {
       // ignore
     }
   };
 
-  // Product Methods (with background Supabase sync)
+  // ===================================================================
+  // PRODUCT METHODS (write through to Supabase — source of truth)
+  // ===================================================================
   const addProduct = (prodData: Omit<Product, 'id'>): Product => {
     const newProduct: Product = {
       ...prodData,
       id: `prod-${Date.now()}`
     };
     setProducts((prev) => [newProduct, ...prev]);
-
     if (isSupabaseConfigured()) {
       supabaseClient.upsert('products', toDbProduct(newProduct)).catch((err) => {
-        console.warn('[Supabase Sync Product]', err);
+        handleWriteError('addProduct', err);
+        setProducts((prev) => prev.filter((p) => p.id !== newProduct.id));
       });
     }
-
     return newProduct;
   };
 
@@ -551,22 +369,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return p;
       })
     );
-
     if (updatedObj && isSupabaseConfigured()) {
-      supabaseClient.upsert('products', toDbProduct(updatedObj)).catch((err) => {
-        console.warn('[Supabase Update Product]', err);
-      });
+      supabaseClient.upsert('products', toDbProduct(updatedObj)).catch((err) => handleWriteError('updateProduct', err));
     }
   };
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
     removeFromCart(id);
-
     if (isSupabaseConfigured()) {
-      supabaseClient.delete('products', 'id', id).catch((err) => {
-        console.warn('[Supabase Delete Product]', err);
-      });
+      supabaseClient.delete('products', 'id', id).catch((err) => handleWriteError('deleteProduct', err));
     }
   };
 
@@ -582,11 +394,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return p;
       })
     );
-
     if (updatedObj && isSupabaseConfigured()) {
-      supabaseClient.upsert('products', toDbProduct(updatedObj)).catch((err) => {
-        console.warn('[Supabase Price Update]', err);
-      });
+      supabaseClient.upsert('products', toDbProduct(updatedObj)).catch((err) => handleWriteError('updateProductPrice', err));
     }
   };
 
@@ -595,23 +404,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
-          const nextStatus: ProductStatus =
-            p.status === 'Disponible' ? 'Sin Stock' : 'Disponible';
+          const nextStatus: ProductStatus = p.status === 'Disponible' ? 'Sin Stock' : 'Disponible';
           updatedObj = { ...p, status: nextStatus };
           return updatedObj;
         }
         return p;
       })
     );
-
     if (updatedObj && isSupabaseConfigured()) {
-      supabaseClient.upsert('products', toDbProduct(updatedObj)).catch((err) => {
-        console.warn('[Supabase Status Toggle]', err);
-      });
+      supabaseClient.upsert('products', toDbProduct(updatedObj)).catch((err) => handleWriteError('toggleProductStatus', err));
     }
   };
 
-  // Category Methods (with background Supabase sync)
+  // ===================================================================
+  // CATEGORY METHODS
+  // ===================================================================
   const addCategory = (catData: Omit<Category, 'id' | 'slug'>): Category => {
     const slug = generateSlug(catData.name) || `cat-${Date.now()}`;
     const newCat: Category = {
@@ -620,13 +427,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       slug
     };
     setCategories((prev) => [...prev, newCat]);
-
     if (isSupabaseConfigured()) {
       supabaseClient.upsert('categories', toDbCategory(newCat)).catch((err) => {
-        console.warn('[Supabase Add Category]', err);
+        handleWriteError('addCategory', err);
+        setCategories((prev) => prev.filter((c) => c.id !== newCat.id));
       });
     }
-
     return newCat;
   };
 
@@ -643,21 +449,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return cat;
       })
     );
-
     if (updatedObj && isSupabaseConfigured()) {
-      supabaseClient.upsert('categories', toDbCategory(updatedObj)).catch((err) => {
-        console.warn('[Supabase Update Category]', err);
-      });
+      supabaseClient.upsert('categories', toDbCategory(updatedObj)).catch((err) => handleWriteError('updateCategory', err));
     }
   };
 
   const deleteCategory = (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
-
     if (isSupabaseConfigured()) {
-      supabaseClient.delete('categories', 'id', id).catch((err) => {
-        console.warn('[Supabase Delete Category]', err);
-      });
+      supabaseClient.delete('categories', 'id', id).catch((err) => handleWriteError('deleteCategory', err));
     }
   };
 
@@ -674,15 +474,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .filter((cat): cat is Category => cat !== null);
       return reordered;
     });
-
     if (isSupabaseConfigured() && reordered.length > 0) {
-      supabaseClient.upsert('categories', reordered.map(toDbCategory)).catch((err) => {
-        console.warn('[Supabase Reorder Categories]', err);
-      });
+      supabaseClient.upsert('categories', reordered.map(toDbCategory)).catch((err) => handleWriteError('reorderCategories', err));
     }
   };
 
-  // Preventista Methods (with background Supabase sync)
+  // ===================================================================
+  // PREVENTISTA METHODS
+  // ===================================================================
   const addPreventista = (prevData: Omit<Preventista, 'id' | 'slug'>): Preventista => {
     const slug = generateSlug(prevData.name) || `prev-${Date.now()}`;
     const newPrev: Preventista = {
@@ -692,13 +491,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       slug
     };
     setPreventistas((prev) => [...prev, newPrev]);
-
     if (isSupabaseConfigured()) {
       supabaseClient.upsert('preventistas', toDbPreventista(newPrev)).catch((err) => {
-        console.warn('[Supabase Add Preventista]', err);
+        handleWriteError('addPreventista', err);
+        setPreventistas((prev) => prev.filter((p) => p.id !== newPrev.id));
       });
     }
-
     return newPrev;
   };
 
@@ -709,31 +507,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (p.id === id) {
           const newName = updates.name !== undefined ? updates.name : p.name;
           const newSlug = updates.name ? generateSlug(updates.name) : p.slug;
-          const newWa =
-            updates.whatsapp !== undefined
-              ? cleanWhatsAppNumber(updates.whatsapp)
-              : p.whatsapp;
+          const newWa = updates.whatsapp !== undefined ? cleanWhatsAppNumber(updates.whatsapp) : p.whatsapp;
           updatedObj = { ...p, ...updates, slug: newSlug, whatsapp: newWa };
           return updatedObj;
         }
         return p;
       })
     );
-
     if (updatedObj && isSupabaseConfigured()) {
-      supabaseClient.upsert('preventistas', toDbPreventista(updatedObj)).catch((err) => {
-        console.warn('[Supabase Update Preventista]', err);
-      });
+      supabaseClient.upsert('preventistas', toDbPreventista(updatedObj)).catch((err) => handleWriteError('updatePreventista', err));
     }
   };
 
   const deletePreventista = (id: string) => {
     setPreventistas((prev) => prev.filter((p) => p.id !== id));
-
     if (isSupabaseConfigured()) {
-      supabaseClient.delete('preventistas', 'id', id).catch((err) => {
-        console.warn('[Supabase Delete Preventista]', err);
-      });
+      supabaseClient.delete('preventistas', 'id', id).catch((err) => handleWriteError('deletePreventista', err));
     }
   };
 
@@ -747,51 +536,73 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return `${base}?view=pedidos`;
   };
 
-  // Settings & Security
+  // ===================================================================
+  // SETTINGS & SECURITY
+  // ===================================================================
   const updateSettings = (updates: Partial<StoreSettings>) => {
     let newSettings: StoreSettings = settings;
     setSettings((prev) => {
       newSettings = {
         ...prev,
         ...updates,
-        defaultWhatsApp: updates.defaultWhatsApp
-          ? cleanWhatsAppNumber(updates.defaultWhatsApp)
-          : prev.defaultWhatsApp
+        defaultWhatsApp: updates.defaultWhatsApp ? cleanWhatsAppNumber(updates.defaultWhatsApp) : prev.defaultWhatsApp
       };
       return newSettings;
     });
-
     if (isSupabaseConfigured()) {
-      supabaseClient.upsert('store_settings', toDbSettings(newSettings)).catch((err) => {
-        console.warn('[Supabase Settings Update]', err);
-      });
+      supabaseClient.upsert('store_settings', toDbSettings(newSettings)).catch((err) => handleWriteError('updateSettings', err));
     }
   };
 
-  const updateAdminPassword = (newPassword: string): boolean => {
+  const updateAdminPassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
     if (!newPassword || newPassword.trim().length < 4) return false;
-    setAdminCreds({
-      username: 'admin',
-      passwordHash: newPassword.trim(),
-      lastUpdated: new Date().toISOString()
-    });
-    return true;
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const ok = await supabaseClient.rpc('admin_change_password', {
+        current_pwd: currentPassword.trim(),
+        new_pwd: newPassword.trim()
+      });
+      return ok === true;
+    } catch (err) {
+      handleWriteError('updateAdminPassword', err);
+      return false;
+    }
   };
 
-  const loginAdmin = (password: string): boolean => {
+  const loginAdmin = async (password: string): Promise<boolean> => {
     const trimmed = password.trim();
-    if (trimmed === adminCreds.passwordHash || (adminCreds.passwordHash === '123456' && trimmed === 'admin123')) {
-      setIsAdminAuthenticated(true);
-      return true;
+    if (!trimmed) return false;
+
+    if (!isSupabaseConfigured()) {
+      setCloudStatusText('Supabase no configurado: no se puede iniciar sesión. Definí VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
+      return false;
     }
-    return false;
+
+    try {
+      const ok = await supabaseClient.rpc('admin_login', { pwd: trimmed });
+      if (ok === true) {
+        setIsAdminAuthenticated(true);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      handleWriteError('loginAdmin', err);
+      return false;
+    }
   };
 
   const logoutAdmin = () => {
     setIsAdminAuthenticated(false);
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   };
 
-  // Orders Methods (with Supabase sync & localStorage)
+  // ===================================================================
+  // ORDERS METHODS
+  // ===================================================================
   const addOrder = (orderData: {
     clientName?: string;
     notes?: string;
@@ -839,13 +650,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setOrders((prev) => [newOrder, ...prev]);
-
     if (isSupabaseConfigured()) {
-      supabaseClient.upsert('orders', toDbOrder(newOrder)).catch((err) => {
-        console.warn('[Supabase Insert Order]', err);
-      });
+      supabaseClient.upsert('orders', toDbOrder(newOrder)).catch((err) => handleWriteError('addOrder', err));
     }
-
     return newOrder;
   };
 
@@ -860,20 +667,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return o;
       })
     );
-
     if (updatedObj && isSupabaseConfigured()) {
-      supabaseClient.upsert('orders', toDbOrder(updatedObj)).catch((err) => {
-        console.warn('[Supabase Update Order Status]', err);
-      });
+      supabaseClient.upsert('orders', toDbOrder(updatedObj)).catch((err) => handleWriteError('updateOrderStatus', err));
     }
   };
 
   const deleteOrder = (orderId: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
     if (isSupabaseConfigured()) {
-      supabaseClient.delete('orders', 'id', orderId).catch((err) => {
-        console.warn('[Supabase Delete Order]', err);
-      });
+      supabaseClient.delete('orders', 'id', orderId).catch((err) => handleWriteError('deleteOrder', err));
     }
   };
 
@@ -887,32 +689,111 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const resetAllDataToDefaults = () => {
-    setProducts(INITIAL_PRODUCTS);
-    setCategories(INITIAL_CATEGORIES);
-    setPreventistas(INITIAL_PREVENTISTAS);
-    setSettings(INITIAL_SETTINGS);
-    setAdminCreds(INITIAL_ADMIN);
-    setCart([]);
-  };
-
-  const clearAllCatalogData = () => {
+  // ===================================================================
+  // DANGER ZONE: wipe everything (starts the owner from scratch)
+  // ===================================================================
+  const clearAllCatalogData = async () => {
+    // Empty the catalog tables in Supabase, then clear local in-memory state.
+    if (isSupabaseConfigured()) {
+      try {
+        await Promise.all([
+          supabaseClient.deleteAll('products'),
+          supabaseClient.deleteAll('categories'),
+          supabaseClient.deleteAll('preventistas'),
+          supabaseClient.deleteAll('orders')
+        ]);
+      } catch (err) {
+        handleWriteError('clearAllCatalogData', err);
+        return;
+      }
+    }
     setProducts([]);
     setCategories([]);
+    setPreventistas([]);
+    setOrders([]);
     setCart([]);
     try {
-      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify([]));
-      localStorage.removeItem(STORAGE_KEYS.CART);
-      localStorage.removeItem(STORAGE_KEYS.CART_TIMESTAMP);
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(CART_TIMESTAMP_KEY);
     } catch {
       // ignore
     }
   };
 
-  const loadDemoData = () => {
-    setCategories(DEMO_CATEGORIES);
-    setProducts(DEMO_PRODUCTS);
+  const resetAllDataToDefaults = async () => {
+    await clearAllCatalogData();
+    setSettings(INITIAL_SETTINGS);
+    if (isSupabaseConfigured()) {
+      try {
+        await supabaseClient.upsert('store_settings', toDbSettings(INITIAL_SETTINGS));
+      } catch (err) {
+        handleWriteError('resetSettings', err);
+      }
+    }
+  };
+
+  // ===================================================================
+  // BACKUP (JSON): export reads current Supabase-backed state; import writes it to Supabase
+  // ===================================================================
+  const exportBackupJson = (): string => {
+    const backup = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      products,
+      categories,
+      preventistas,
+      settings,
+      orders
+    };
+    return JSON.stringify(backup, null, 2);
+  };
+
+  const importBackupJson = async (jsonString: string): Promise<boolean> => {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!isSupabaseConfigured()) {
+        setCloudStatusText('Supabase no configurado: no se puede importar el respaldo.');
+        return false;
+      }
+
+      const nextProducts: Product[] = Array.isArray(data.products) ? data.products : products;
+      const nextCategories: Category[] = Array.isArray(data.categories) ? data.categories : categories;
+      const nextPreventistas: Preventista[] = Array.isArray(data.preventistas) ? data.preventistas : preventistas;
+      const nextOrders: Order[] = Array.isArray(data.orders) ? data.orders : orders;
+      const nextSettings: StoreSettings = data.settings && typeof data.settings === 'object' ? data.settings : settings;
+
+      // Replace cloud data with the backup contents (delete then upsert)
+      setIsCloudSyncing(true);
+      setCloudStatusText('Importando respaldo a Supabase...');
+      await Promise.all([
+        supabaseClient.deleteAll('products'),
+        supabaseClient.deleteAll('categories'),
+        supabaseClient.deleteAll('preventistas'),
+        supabaseClient.deleteAll('orders')
+      ]);
+      await Promise.all([
+        nextProducts.length > 0 ? supabaseClient.upsert('products', nextProducts.map(toDbProduct)) : Promise.resolve(true),
+        nextCategories.length > 0 ? supabaseClient.upsert('categories', nextCategories.map(toDbCategory)) : Promise.resolve(true),
+        nextPreventistas.length > 0 ? supabaseClient.upsert('preventistas', nextPreventistas.map(toDbPreventista)) : Promise.resolve(true),
+        nextOrders.length > 0 ? supabaseClient.upsert('orders', nextOrders.map(toDbOrder)) : Promise.resolve(true),
+        supabaseClient.upsert('store_settings', toDbSettings(nextSettings))
+      ]);
+
+      setProducts(nextProducts);
+      setCategories(nextCategories);
+      setPreventistas(nextPreventistas);
+      setOrders(nextOrders);
+      setSettings(nextSettings);
+      setIsCloudConnected(true);
+      setCloudStatusText('☁️ Respaldo importado y sincronizado');
+      return true;
+    } catch (err) {
+      console.warn('[Import Backup Error]', err);
+      setCloudStatusText('⚠️ Error al importar el respaldo.');
+      return false;
+    } finally {
+      setIsCloudSyncing(false);
+    }
   };
 
   return (
@@ -957,13 +838,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logoutAdmin,
         resetAllDataToDefaults,
         clearAllCatalogData,
-        loadDemoData,
+        isCloudConfigured,
         isCloudConnected,
         isCloudSyncing,
+        isInitialLoading,
         cloudStatusText,
         refreshFromCloud,
-        syncLocalToCloud,
-        saveCloudCredentials,
         exportBackupJson,
         importBackupJson
       }}

@@ -5,7 +5,7 @@ Este archivo define el contexto de arquitectura, convenciones y directivas para 
 ---
 
 ## 📌 Resumen del Proyecto
-- **Propósito**: Catálogo mayorista de distribución para mascotas (alimentos, snacks, accesorios) con generación de pedidos directos a WhatsApp según el preventista asignado o canal central, y panel administrativo completo.
+- **Propósito**: Catálogo mayorista multirrubro de distribución con generación de pedidos directos a WhatsApp según el preventista asignado o canal central, y panel administrativo completo.
 - **Frontend**: React 18+ (SPA), TypeScript, Vite, Tailwind CSS, `lucide-react`.
 - **Estado Global**: `StoreContext.tsx` (`useStore()`) como única fuente de verdad y sincronizador de reactividad.
 - **Persistencia**: LocalStorage (offline-first) + sincronización opcional con Supabase (PostgreSQL).

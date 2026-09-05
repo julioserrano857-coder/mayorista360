@@ -1,5 +1,5 @@
 -- ==============================================================================
--- SCHEMA SUPABASE: NutriMayorista Pet Food (Catálogo y Preventistas)
+-- SCHEMA SUPABASE: Mayorista360 (Catálogo Mayorista Multirrubro)
 -- ==============================================================================
 -- Instrucciones:
 -- 1. Ve a tu proyecto en Supabase (https://supabase.com)
@@ -25,8 +25,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     id TEXT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     category_id TEXT NOT NULL REFERENCES public.categories(id) ON DELETE RESTRICT,
-    species VARCHAR(50) NOT NULL DEFAULT 'Perro', -- 'Perro', 'Gato', 'Otros'
-    weight VARCHAR(100) NOT NULL,                 -- ej: '15 kg', '20 kg', 'Pack x 12'
+    weight VARCHAR(100) NOT NULL,                 -- ej: 'Caja x 24', 'Pack x 6', '15 kg'
     price NUMERIC(12, 2) NOT NULL DEFAULT 0,
     status VARCHAR(50) NOT NULL DEFAULT 'Disponible', -- 'Disponible', 'Sin Stock'
     image_url TEXT NOT NULL DEFAULT '',
@@ -51,10 +50,10 @@ CREATE TABLE IF NOT EXISTS public.preventistas (
 -- 4. TABLA: CONFIGURACIÓN DE LA TIENDA (store_settings)
 CREATE TABLE IF NOT EXISTS public.store_settings (
     id VARCHAR(50) PRIMARY KEY DEFAULT 'default_settings',
-    company_name VARCHAR(200) NOT NULL DEFAULT 'NutriMayorista Pet Food',
-    default_whatsapp VARCHAR(50) NOT NULL DEFAULT '5491134567890',
+    company_name VARCHAR(200) NOT NULL DEFAULT 'Mi Distribuidora Mayorista',
+    default_whatsapp VARCHAR(50) NOT NULL DEFAULT '',
     currency_symbol VARCHAR(10) NOT NULL DEFAULT '$',
-    announcement TEXT DEFAULT '📦 Envíos mayoristas bonificados en pedidos superiores a $150.000 | Entregas en 24/48hs',
+    announcement TEXT,
     min_order_amount NUMERIC(12, 2) DEFAULT 0,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -73,6 +72,15 @@ CREATE TABLE IF NOT EXISTS public.orders (
     total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
     total_units INTEGER NOT NULL DEFAULT 0,
     status VARCHAR(50) NOT NULL DEFAULT 'Pendiente' -- 'Pendiente', 'Entregado', 'Cancelado'
+);
+
+-- 6. TABLA: CREDENCIALES DEL ADMINISTRADOR (admin_auth)
+-- La clave del panel NO se expone en lecturas públicas: solo se consulta
+-- a través de las funciones admin_login / admin_change_password (más abajo).
+CREATE TABLE IF NOT EXISTS public.admin_auth (
+    id VARCHAR(50) PRIMARY KEY DEFAULT 'admin',
+    password_hash VARCHAR(200) NOT NULL DEFAULT '123456',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- ==============================================================================
@@ -95,6 +103,71 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.preventistas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_auth ENABLE ROW LEVEL SECURITY;
+
+-- La tabla admin_auth NO tiene políticas de lectura pública ni escritura directa.
+-- Solo las funciones RPC pueden tocarla (corren con permisos del owner, security definer).
+
+-- ==============================================================================
+-- FUNCIONES DE SEGURIDAD DEL ADMINISTRADOR (RPC)
+-- Verifican/clave cambian la clave SIN exponerla en las lecturas públicas.
+-- ==============================================================================
+
+-- Fila inicial del admin (clave por defecto: 123456, igual que muestra la pantalla de login)
+INSERT INTO public.admin_auth (id, password_hash)
+VALUES ('admin', '123456')
+ON CONFLICT (id) DO NOTHING;
+
+-- Fila inicial de configuración (el dueño la edita desde el panel)
+INSERT INTO public.store_settings (id, company_name, default_whatsapp, currency_symbol, announcement, min_order_amount)
+VALUES ('default_settings', 'Mi Distribuidora Mayorista', '', '$', '', 0)
+ON CONFLICT (id) DO NOTHING;
+CREATE OR REPLACE FUNCTION public.admin_login(pwd TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_auth
+    WHERE id = 'admin' AND password_hash = pwd
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_change_password(current_pwd TEXT, new_pwd TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  valid BOOLEAN;
+BEGIN
+  IF new_pwd IS NULL OR length(new_pwd) < 4 THEN
+    RETURN FALSE;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_auth
+    WHERE id = 'admin' AND password_hash = current_pwd
+  ) INTO valid;
+
+  IF NOT valid THEN
+    RETURN FALSE;
+  END IF;
+
+  UPDATE public.admin_auth
+  SET password_hash = new_pwd, updated_at = timezone('utc'::text, now())
+  WHERE id = 'admin';
+
+  RETURN TRUE;
+END;
+$$;
+
+-- Permitir que la app llame a las funciones con la clave anon
+GRANT EXECUTE ON FUNCTION public.admin_login(TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_change_password(TEXT, TEXT) TO anon, authenticated;
+-- No se da ningún permiso de tabla sobre admin_auth: queda oculta para REST.
 
 -- Políticas de LECTURA PÚBLICA (para que el catálogo cargue instantáneamente)
 CREATE POLICY "Lectura pública de categorías" ON public.categories FOR SELECT USING (true);

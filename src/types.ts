@@ -1,14 +1,3 @@
-export type Species = 'Perro' | 'Gato' | 'Otros';
-export type Rubro = 
-  | 'Mascotas'
-  | 'Cigarrillos y Tabaco'
-  | 'Kiosco y Golosinas'
-  | 'Snacks y Galletitas'
-  | 'Bebidas y Energizantes'
-  | 'Almacén y Bazar'
-  | 'Otros'
-  | string;
-
 export type ProductStatus = 'Disponible' | 'Sin Stock';
 
 export interface Category {
@@ -17,16 +6,13 @@ export interface Category {
   slug: string;
   order: number;
   active: boolean;
-  rubro?: Rubro;
 }
 
 export interface Product {
   id: string;
   name: string;
   categoryId: string;
-  rubro?: Rubro;
-  species?: Species; // e.g., 'Perro' | 'Gato' | 'Otros' (when rubro is Mascotas)
-  weight: string; // Presentation/unit e.g. '15 kg', 'Cartón x10 paq', 'Display x20 u', 'Pack x12 latas'
+  weight: string; // Presentation/unit e.g. 'Caja x 24', 'Pack x 6', '15 kg'
   price: number;
   status: ProductStatus;
   imageUrl: string;

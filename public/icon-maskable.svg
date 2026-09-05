@@ -1,18 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
   <!-- Full bleed background for Android maskable cropping -->
-  <rect width="512" height="512" fill="#059669"/>
-  <!-- Central safe-zone circle (diameter 380 inside 512) -->
-  <circle cx="256" cy="256" r="185" fill="#047857" opacity="0.35"/>
-  <g fill="#ffffff">
-    <!-- Big central pad -->
-    <path d="M256 265 c-40 0 -72 28 -72 65 c0 28 28 46 72 46 c44 0 72 -18 72 -46 c0 -37 -32 -65 -72 -65 z" />
-    <!-- 4 Toe pads -->
-    <ellipse cx="185" cy="230" rx="24" ry="34" transform="rotate(-18 185 230)" />
-    <ellipse cx="233" cy="190" rx="23" ry="34" transform="rotate(-6 233 190)" />
-    <ellipse cx="279" cy="190" rx="23" ry="34" transform="rotate(6 279 190)" />
-    <ellipse cx="327" cy="230" rx="24" ry="34" transform="rotate(18 327 230)" />
-    <!-- Quality star -->
-    <path d="M256 125 L262 142 L280 142 L265 153 L271 170 L256 160 L241 170 L247 153 L232 142 L250 142 Z" fill="#fde047" />
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Central safe-zone hint (content stays inside) -->
+  <circle cx="256" cy="256" r="170" fill="#047857" opacity="0.22"/>
+  <!-- Wholesale package (open box), centered inside safe zone -->
+  <g>
+    <ellipse cx="256" cy="420" rx="130" ry="14" fill="#022c22" opacity="0.25"/>
+    <path d="M256 118 L384 190 L256 262 L128 190 Z" fill="#ffffff"/>
+    <path d="M128 190 L256 262 L256 408 L128 336 Z" fill="#e7f7f0"/>
+    <path d="M384 190 L256 262 L256 408 L384 336 Z" fill="#cdeede"/>
+    <path d="M256 118 L256 262" stroke="#a7f3d0" stroke-width="9"/>
+    <path d="M256 118 L256 192" stroke="#059669" stroke-width="9" opacity="0.5"/>
   </g>
-  <text x="256" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#ffffff" letter-spacing="2">MAYORISTA</text>
 </svg>

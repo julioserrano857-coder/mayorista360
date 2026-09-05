@@ -1,47 +1,19 @@
 // Cliente y sincronizador con Supabase (TypeScript)
-// Soporta tanto variables de entorno (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
-// como configuración manual desde el panel de administración con fallback en localStorage.
+// Supabase es la ÚNICA fuente de verdad. Las credenciales se configuran
+// SOLO por variables de entorno (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY),
+// nunca desde la UI ni localStorage.
 
 import { Product, Category, Preventista, StoreSettings, Order } from '../types';
 
-const STORAGE_SUPABASE_URL = 'nutrimayorista_supabase_url';
-const STORAGE_SUPABASE_KEY = 'nutrimayorista_supabase_anon_key';
-
 export const getSupabaseConfig = () => {
-  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
-
-  let localUrl = '';
-  let localKey = '';
-  try {
-    localUrl = localStorage.getItem(STORAGE_SUPABASE_URL) || '';
-    localKey = localStorage.getItem(STORAGE_SUPABASE_KEY) || '';
-  } catch {
-    // ignore
-  }
-
-  const url = (localUrl || envUrl).trim();
-  const key = (localKey || envKey).trim();
+  const url = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
+  const key = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
 
   return {
     url,
     key,
-    isCustom: Boolean(localUrl || localKey)
+    isCustom: false
   };
-};
-
-export const setCustomSupabaseConfig = (url: string, key: string) => {
-  try {
-    if (!url.trim() && !key.trim()) {
-      localStorage.removeItem(STORAGE_SUPABASE_URL);
-      localStorage.removeItem(STORAGE_SUPABASE_KEY);
-    } else {
-      localStorage.setItem(STORAGE_SUPABASE_URL, url.trim());
-      localStorage.setItem(STORAGE_SUPABASE_KEY, key.trim());
-    }
-  } catch {
-    // ignore
-  }
 };
 
 export const isSupabaseConfigured = (): boolean => {
@@ -59,7 +31,6 @@ export const toDbProduct = (p: Product) => ({
   id: p.id,
   name: p.name,
   category_id: p.categoryId,
-  species: p.species,
   weight: p.weight,
   price: Number(p.price) || 0,
   status: p.status,
@@ -74,7 +45,6 @@ export const fromDbProduct = (row: any): Product => ({
   id: String(row.id),
   name: String(row.name || ''),
   categoryId: String(row.category_id || ''),
-  species: (row.species === 'Perro' || row.species === 'Gato' || row.species === 'Otros') ? row.species : 'Perro',
   weight: String(row.weight || ''),
   price: Number(row.price) || 0,
   status: row.status === 'Sin Stock' ? 'Sin Stock' : 'Disponible',
@@ -129,8 +99,8 @@ export const toDbSettings = (s: StoreSettings) => ({
 });
 
 export const fromDbSettings = (row: any): StoreSettings => ({
-  companyName: String(row.company_name || 'NutriMayorista Pet Food'),
-  defaultWhatsApp: String(row.default_whatsapp || '5491134567890'),
+  companyName: String(row.company_name || 'Mi Distribuidora Mayorista'),
+  defaultWhatsApp: String(row.default_whatsapp || ''),
   currencySymbol: String(row.currency_symbol || '$'),
   announcement: row.announcement ? String(row.announcement) : undefined,
   minOrderAmount: Number(row.min_order_amount) || 0
@@ -166,7 +136,7 @@ export const fromDbOrder = (row: any): Order => ({
   status: (row.status as any) || 'Pendiente'
 });
 
-// Cliente REST ligero
+// Cliente REST ligero (Supabase = única fuente de verdad)
 export const supabaseClient = {
   isConfigured: isSupabaseConfigured,
 
@@ -192,7 +162,7 @@ export const supabaseClient = {
       return await response.json();
     } catch (err) {
       console.warn(`[Supabase Fetch Error] ${table}:`, err);
-      return [];
+      throw err;
     }
   },
 
@@ -213,7 +183,7 @@ export const supabaseClient = {
       return response.ok;
     } catch (err) {
       console.warn(`[Supabase Upsert Error] ${table}:`, err);
-      return false;
+      throw err;
     }
   },
 
@@ -231,18 +201,58 @@ export const supabaseClient = {
       return response.ok;
     } catch (err) {
       console.warn(`[Supabase Delete Error] ${table}:`, err);
-      return false;
+      throw err;
     }
   },
 
-  async testConnection(customUrl?: string, customKey?: string): Promise<{ success: boolean; message: string }> {
-    const url = customUrl || getSupabaseConfig().url;
-    const key = customKey || getSupabaseConfig().key;
-
-    if (!url || !key) {
-      return { success: false, message: 'Falta ingresar la URL o la API Key anónima.' };
+  async deleteAll(table: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    const { url, key } = getSupabaseConfig();
+    try {
+      const response = await fetch(`${url}/rest/v1/${table}?id=neq.____all____`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`
+        }
+      });
+      return response.ok;
+    } catch (err) {
+      console.warn(`[Supabase DeleteAll Error] ${table}:`, err);
+      throw err;
     }
+  },
 
+  async rpc(fn: string, body: Record<string, unknown> = {}): Promise<any> {
+    if (!isSupabaseConfigured()) return null;
+    const { url, key } = getSupabaseConfig();
+    try {
+      const response = await fetch(`${url}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!response.ok) {
+        console.warn(`[Supabase RPC Error] ${fn}:`, response.status, response.statusText);
+        return null;
+      }
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
+    } catch (err) {
+      console.warn(`[Supabase RPC Fetch Error] ${fn}:`, err);
+      throw err;
+    }
+  },
+
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    const { url, key } = getSupabaseConfig();
+    if (!url || !key) {
+      return { success: false, message: 'Supabase no está configurado. Definí VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en las variables de entorno del deploy.' };
+    }
     try {
       const response = await fetch(`${url}/rest/v1/categories?select=id&limit=1`, {
         headers: {
@@ -250,7 +260,6 @@ export const supabaseClient = {
           'Authorization': `Bearer ${key}`
         }
       });
-
       if (response.ok) {
         return { success: true, message: '¡Conexión exitosa con la base de datos de Supabase!' };
       } else if (response.status === 401 || response.status === 403) {

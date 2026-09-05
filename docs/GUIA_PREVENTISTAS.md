@@ -48,25 +48,25 @@ Esto permite al preventista y al comercio referenciar el pedido fácilmente (ej:
 El mensaje generado tiene el siguiente formato optimizado para fácil lectura:
 
 ```text
-🛒 *NUEVO PEDIDO MAYORISTA - NutriMayorista*
+🛒 *NUEVO PEDIDO MAYORISTA*
 🔢 *Código de Pedido:* #4821
 👤 *Destinatario:* Juan Pérez (Zona Norte)
-🏢 *Comercio / Cliente:* Pet Shop Patitas
+🏢 *Comercio / Cliente:* Almacén El Centro
 📅 *Fecha:* 04/09/2026 11:45
 
 📋 *DETALLE DEL PEDIDO:*
-• 3x Dog Chow Adultos Carne y Pollo 21 kg ($54.200 c/u) = $162.600
-• 2x Pro Plan Gato Sterilized 7.5 kg ($48.900 c/u) = $97.800
+• 3x Coca Cola 1.5L Pack x 6 ($14.500 c/u) = $43.500
+• 2x Alfajor Triple Caja x 24 ($9.600 c/u) = $19.200
 
 📦 *Resumen:*
 • *Total de Bultos:* 5 unidades
-• *MONTO TOTAL:* $260.400
+• *MONTO TOTAL:* $62.700
 
 📝 *Aclaraciones / Observaciones:*
 Entregar en horario de la tarde después de las 14hs.
 
 ---
-_Generado desde Catálogo Digital NutriMayorista_
+_Generado desde Catálogo Digital Mayorista_
 ```
 
 ---

@@ -13,16 +13,14 @@ import {
   AlertCircle,
   Database,
   Cloud,
-  UploadCloud,
   Download,
   Upload,
   RefreshCw,
-  ExternalLink,
   CheckCircle2,
-  Smartphone
+  Smartphone,
+  XCircle
 } from 'lucide-react';
 import { cleanWhatsAppNumber } from '../../utils/whatsapp';
-import { getSupabaseConfig } from '../../lib/supabase';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 
 export const SettingsManagement: React.FC = () => {
@@ -31,12 +29,11 @@ export const SettingsManagement: React.FC = () => {
     updateSettings,
     updateAdminPassword,
     resetAllDataToDefaults,
+    isCloudConfigured,
     isCloudConnected,
     isCloudSyncing,
     cloudStatusText,
     refreshFromCloud,
-    syncLocalToCloud,
-    saveCloudCredentials,
     exportBackupJson,
     importBackupJson
   } = useStore();
@@ -53,15 +50,8 @@ export const SettingsManagement: React.FC = () => {
     setAnnouncement(settings.announcement || '');
   }, [settings.companyName, settings.defaultWhatsApp, settings.announcement]);
 
-  // Supabase Credentials State
-  const initialCloudConfig = getSupabaseConfig();
-  const [supabaseUrl, setSupabaseUrl] = useState(initialCloudConfig.url);
-  const [supabaseKey, setSupabaseKey] = useState(initialCloudConfig.key);
-  const [cloudMsg, setCloudMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isTestingCloud, setIsTestingCloud] = useState(false);
-  const [isPushingCloud, setIsPushingCloud] = useState(false);
-
   // Password Change
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -77,68 +67,32 @@ export const SettingsManagement: React.FC = () => {
     setTimeout(() => setSavedSettings(false), 2000);
   };
 
-  const handleSaveCloudConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCloudMsg(null);
-    setIsTestingCloud(true);
-
-    try {
-      const res = await saveCloudCredentials(supabaseUrl, supabaseKey);
-      if (res.success) {
-        setCloudMsg({ type: 'success', text: res.message });
-      } else {
-        setCloudMsg({ type: 'error', text: res.message });
-      }
-    } catch (err: any) {
-      setCloudMsg({ type: 'error', text: `Error de conexión: ${err?.message || 'Error desconocido'}` });
-    } finally {
-      setIsTestingCloud(false);
-    }
-  };
-
-  const handlePushDataToCloud = async () => {
-    setCloudMsg(null);
-    setIsPushingCloud(true);
-    try {
-      const res = await syncLocalToCloud();
-      if (res.success) {
-        setCloudMsg({ type: 'success', text: res.message });
-      } else {
-        setCloudMsg({ type: 'error', text: res.message });
-      }
-    } catch (err: any) {
-      setCloudMsg({ type: 'error', text: `Error al subir datos: ${err?.message || 'Error desconocido'}` });
-    } finally {
-      setIsPushingCloud(false);
-    }
-  };
-
   const handleExportBackup = () => {
     const jsonStr = exportBackupJson();
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `nutrimayorista_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `mayorista360_backup_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
       if (content) {
-        const ok = importBackupJson(content);
+        const ok = await importBackupJson(content);
         if (ok) {
           alert('¡Respaldo importado y cargado con éxito!');
         } else {
-          alert('Error: el archivo no tiene un formato de respaldo JSON válido.');
+          alert('Error: el archivo no tiene un formato de respaldo JSON válido o no hay conexión con Supabase.');
         }
       }
     };
@@ -146,7 +100,7 @@ export const SettingsManagement: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordMsg(null);
 
@@ -160,35 +114,45 @@ export const SettingsManagement: React.FC = () => {
       return;
     }
 
-    const ok = updateAdminPassword(newPassword);
+    if (!currentPassword.trim()) {
+      setPasswordMsg({ type: 'error', text: 'Ingresá tu contraseña actual para confirmar el cambio.' });
+      return;
+    }
+
+    const ok = await updateAdminPassword(currentPassword, newPassword);
     if (ok) {
       setPasswordMsg({ type: 'success', text: '¡Contraseña actualizada con éxito!' });
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } else {
-      setPasswordMsg({ type: 'error', text: 'Error al actualizar contraseña.' });
+      setPasswordMsg({ type: 'error', text: 'No se pudo cambiar la contraseña. Verificá que la contraseña actual sea correcta y que haya conexión con Supabase.' });
     }
   };
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
     if (
       window.confirm(
-        '¿Está seguro de restaurar el catálogo y configuración a los datos iniciales de fábrica? Esta acción reemplazará los productos actuales.'
+        '¿Estás seguro? Esto borra TODOS los productos, categorías, preventistas y pedidos de Supabase (y de este navegador). Esta acción no se puede deshacer.'
       )
     ) {
-      resetAllDataToDefaults();
-      alert('Datos restaurados correctamente.');
+      await resetAllDataToDefaults();
+      alert('Datos borrados. El catálogo quedó vacío para empezar de cero.');
     }
+  };
+
+  const handleTestConnection = async () => {
+    await refreshFromCloud();
   };
 
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* 1. Supabase Cloud Database Configuration */}
+      {/* 1. Supabase Cloud Connection Status */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-5">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
-              isCloudConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+              isCloudConnected ? 'bg-emerald-100 text-emerald-800' : isCloudConfigured ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
             }`}>
               <Database className="w-5 h-5" />
             </div>
@@ -200,9 +164,15 @@ export const SettingsManagement: React.FC = () => {
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     Conectado
                   </span>
+                ) : isCloudConfigured ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                    Sin conexión
+                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                    Modo Local (Listo)
+                    <XCircle className="w-3 h-3 text-slate-500" />
+                    No configurado
                   </span>
                 )}
               </h3>
@@ -214,103 +184,39 @@ export const SettingsManagement: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => refreshFromCloud()}
+              onClick={handleTestConnection}
               disabled={isCloudSyncing}
               className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
               title="Recargar datos desde la nube"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refrescar</span>
+              <span className="hidden sm:inline">Probar / Recargar</span>
             </button>
           </div>
         </div>
 
-        {cloudMsg && (
-          <div
-            className={`p-3.5 rounded-xl text-xs font-semibold mb-4 flex items-center gap-2 ${
-              cloudMsg.type === 'success'
-                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                : 'bg-rose-50 border border-rose-200 text-rose-800'
-            }`}
-          >
-            {cloudMsg.type === 'success' ? (
-              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <span>{cloudMsg.text}</span>
+        {!isCloudConfigured && (
+          <div className="p-3.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-2">
+            <Cloud className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="block">Supabase aún no está configurado.</strong>
+              La conexión se define con las variables de entorno <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_URL</code> y{' '}
+              <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code> en el deploy (Vercel / hosting). Una vez cargadas, presioná "Probar / Recargar".
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleSaveCloudConfig} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Project URL de Supabase
-              </label>
-              <input
-                type="url"
-                value={supabaseUrl}
-                onChange={(e) => setSupabaseUrl(e.target.value)}
-                placeholder="https://xyzcompany.supabase.co"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Se encuentra en Supabase &gt; Project Settings &gt; API
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Anon / Public API Key
-              </label>
-              <input
-                type="password"
-                value={supabaseKey}
-                onChange={(e) => setSupabaseKey(e.target.value)}
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Clave pública 'anon' de tu proyecto Supabase
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-slate-500 max-w-md">
-              Scripts SQL listos en la carpeta <code className="text-slate-700 font-mono bg-slate-100 px-1.5 py-0.5 rounded">/supabase/schema.sql</code>.
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={isTestingCloud}
-                className="py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-98 cursor-pointer disabled:opacity-50"
-              >
-                <Cloud className="w-4 h-4" />
-                <span>{isTestingCloud ? 'Probando conexión...' : 'Guardar y Probar Conexión'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePushDataToCloud}
-                disabled={isPushingCloud || !supabaseUrl}
-                className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-98 cursor-pointer disabled:opacity-50"
-                title="Sube los productos y preventistas actuales de este navegador a Supabase"
-              >
-                <UploadCloud className="w-4 h-4" />
-                <span>{isPushingCloud ? 'Subiendo...' : 'Subir Catálogo Actual a Supabase'}</span>
-              </button>
-            </div>
-          </div>
-        </form>
+        {isCloudConnected && (
+          <p className="text-xs text-slate-500 mb-4">
+            Todo el catálogo y los pedidos se guardan en la nube. No se usa almacenamiento local del navegador (salvo el carrito en curso).
+          </p>
+        )}
 
         {/* JSON Backup & Restore Tools */}
         <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/70 p-3.5 rounded-xl">
           <div>
-            <span className="text-xs font-bold text-slate-800 block">Respaldos Locales en Archivo JSON</span>
-            <span className="text-[11px] text-slate-500 block">Descarga o restaura una copia completa de tus productos y precios.</span>
+            <span className="text-xs font-bold text-slate-800 block">Respaldos en Archivo JSON</span>
+            <span className="text-[11px] text-slate-500 block">Descarga o restaura una copia completa de tus productos, precios y pedidos.</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -364,7 +270,7 @@ export const SettingsManagement: React.FC = () => {
                 required
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="NutriMayorista Pet Food"
+                placeholder="Ej: Distribuidora San Martín"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -469,11 +375,11 @@ export const SettingsManagement: React.FC = () => {
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
             <div className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-              <span>⚡</span>
-              <span>Funcionamiento Offline</span>
+              <span>☁️</span>
+              <span>Datos en la Nube</span>
             </div>
             <p className="text-slate-500 leading-relaxed">
-              Los productos y precios se guardan en el dispositivo para que el catálogo cargue de inmediato incluso con baja señal.
+              Catálogo, precios y pedidos se guardan en Supabase y se ven igual en cualquier dispositivo con internet.
             </p>
           </div>
 
@@ -500,7 +406,7 @@ export const SettingsManagement: React.FC = () => {
               Seguridad y Contraseña del Administrador
             </h3>
             <p className="text-xs text-slate-500">
-              Modifica la clave de acceso al panel de administración
+              Modifica la clave de acceso al panel de administración (se guarda en la nube)
             </p>
           </div>
         </div>
@@ -524,6 +430,21 @@ export const SettingsManagement: React.FC = () => {
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Contraseña Actual <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="settings-current-password"
+                type="password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Tu clave actual"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <div className="hidden sm:block" />
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Nueva Contraseña <span className="text-rose-500">*</span>
@@ -571,14 +492,14 @@ export const SettingsManagement: React.FC = () => {
         </form>
       </div>
 
-      {/* 4. Danger Zone / Reset */}
+      {/* 5. Danger Zone / Reset */}
       <div className="bg-rose-50/50 rounded-2xl border border-rose-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h4 className="text-sm font-extrabold text-rose-900">
-            Restablecer Datos de Demostración
+            Empezar de Cero (Vaciar Todo)
           </h4>
           <p className="text-xs text-rose-700/80 mt-0.5 max-w-lg">
-            Si deseas reiniciar los productos, categorías y preventistas al catálogo de muestra inicial.
+            Borra todos los productos, categorías, preventistas y pedidos de la nube y vuelve la configuración al estado inicial en blanco.
           </p>
         </div>
 
@@ -587,7 +508,7 @@ export const SettingsManagement: React.FC = () => {
           className="py-2 px-3.5 rounded-xl bg-white border border-rose-300 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Restaurar Catálogo Inicial</span>
+          <span>Vaciar y Empezar de Cero</span>
         </button>
       </div>
     </div>

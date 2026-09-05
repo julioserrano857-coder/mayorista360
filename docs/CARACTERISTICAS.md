@@ -11,7 +11,6 @@ Este documento detalla todas las funcionalidades implementadas en el sistema par
   - **Cuadrícula (Grid)**: Tarjetas con imagen destacada, precio resaltado, peso y selector rápido de cantidad (+/-). En celulares se muestra en 2 columnas perfectas.
   - **Lista Rápida (List)**: Filas compactas diseñadas para agilizar la carga de pedidos recurrentes en comercios.
 - **Filtros Simultáneos**:
-  - Por especie: *Todos*, *Perros*, *Gatos*, *Otras Especies*.
   - Por categoría de producto: Pestañas horizontales con scroll táctil suave.
   - *Solo disponibles*: Oculta automáticamente los artículos sin stock.
 - **Buscador en Vivo**: Filtra al instante por nombre, marca, peso o SKU.
@@ -27,7 +26,7 @@ Este documento detalla todas las funcionalidades implementadas en el sistema par
   - Cada confirmación de pedido genera un código numérico aleatorio único de 4 dígitos (ej: `#8392`).
   - El código se almacena en la base de datos y se incluye al principio del mensaje de WhatsApp.
 - **Formulario de Finalización**:
-  - Campo opcional para ingresar el nombre del comercio / cliente (ej: *Pet Shop Patitas*).
+  - Campo opcional para ingresar el nombre del comercio / cliente (ej: *Almacén El Centro*).
   - Campo opcional de notas de entrega o aclaraciones de pago.
   - Acordeón de vista previa para leer el mensaje antes de enviarlo.
   - Al presionar **Enviar Pedido**, se abre WhatsApp con el mensaje pre-armado y se activa una animación de confeti con pantalla de confirmación.
@@ -58,7 +57,7 @@ Este documento detalla todas las funcionalidades implementadas en el sistema par
 
 - **Edición Rápida "In-Line"**: Modifica el precio de cualquier producto directamente sobre la tabla sin necesidad de abrir formularios extensos; al presionar *Enter* o hacer clic en el check, el nuevo precio se guarda y se propaga a todos los catálogos y enlaces de preventistas.
 - **Alternador de Stock**: Cambia con 1 clic el estado de *Disponible* a *Sin Stock*.
-- **Modal de Creación y Edición Completa**: Formulario con nombre, marca, categoría, especie, presentación/peso, precio, costo, SKU, estado, imagen y descripción detallada.
+- **Modal de Creación y Edición Completa**: Formulario con nombre, marca, categoría, presentación/peso, precio, SKU, estado, imagen y descripción detallada.
 
 ---
 

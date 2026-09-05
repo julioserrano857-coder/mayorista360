@@ -59,7 +59,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding })
             {/* Left: Brand & Title */}
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                🐾
+                📦
               </div>
               <div>
                 <div className="flex items-center gap-2">

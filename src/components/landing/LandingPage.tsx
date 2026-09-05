@@ -22,7 +22,8 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     settings,
     isAdminAuthenticated,
     loginAdmin,
-    logoutAdmin
+    logoutAdmin,
+    isCloudConfigured
   } = useStore();
 
   const [username, setUsername] = useState('admin');
@@ -31,7 +32,7 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -42,17 +43,19 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const isSuccess = loginAdmin(password);
-      setIsLoading(false);
-
+    try {
+      const isSuccess = await loginAdmin(password);
       if (isSuccess) {
         setPassword('');
         onLoginSuccess();
       } else {
         setError('Contraseña incorrecta. (Clave por defecto: 123456)');
       }
-    }, 250);
+    } catch {
+      setError('No se pudo conectar. Revisá tu internet e intentá de nuevo.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,7 +70,7 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* Brand Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-3xl shadow-xl shadow-sky-500/20 ring-4 ring-white/10 mx-auto mb-4">
-            🐾
+            📦
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             {settings.companyName}
@@ -115,6 +118,20 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           ) : (
             /* Login Form */
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {!isCloudConfigured && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold text-amber-100">Supabase no configurado.</strong>
+                    <span>
+                      Para usar el sistema hay que definir las variables de entorno{' '}
+                      <code className="bg-amber-950/60 px-1 rounded">VITE_SUPABASE_URL</code> y{' '}
+                      <code className="bg-amber-950/60 px-1 rounded">VITE_SUPABASE_ANON_KEY</code> en el deploy.
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 pb-4 border-b border-slate-800 text-slate-300">
                 <Lock className="w-4 h-4 text-sky-400" />
                 <span className="text-xs font-bold uppercase tracking-wider">Iniciar Sesión</span>

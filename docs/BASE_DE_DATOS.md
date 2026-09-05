@@ -7,7 +7,6 @@ Este documento describe las tablas de base de datos en Supabase (PostgreSQL), lo
 ## 📐 1. Tipos de TypeScript (`/src/types.ts`)
 
 ```typescript
-export type Species = 'Perro' | 'Gato' | 'Otros';
 export type ProductStatus = 'Disponible' | 'Sin Stock';
 export type OrderStatus = 'Pendiente' | 'Entregado' | 'Cancelado';
 
@@ -16,15 +15,12 @@ export interface Product {
   name: string;
   brand?: string;
   categoryId: string;
-  species: Species;
-  weight: string; // Ej: "15 kg", "Pack x12"
+  weight: string; // Ej: "Caja x 24", "Pack x 12"
   price: number;
-  costPrice?: number;
   status: ProductStatus;
   imageUrl: string;
   sku?: string;
   description?: string;
-  featured?: boolean;
 }
 
 export interface Category {
@@ -99,15 +95,12 @@ CREATE TABLE IF NOT EXISTS public.products (
   name TEXT NOT NULL,
   brand TEXT,
   category_id TEXT REFERENCES public.categories(id) ON DELETE SET NULL,
-  species TEXT NOT NULL DEFAULT 'Perro',
   weight TEXT NOT NULL,
   price NUMERIC(12, 2) NOT NULL DEFAULT 0,
-  cost_price NUMERIC(12, 2) DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'Disponible',
   image_url TEXT,
   sku TEXT,
   description TEXT,
-  featured BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -164,18 +157,12 @@ CREATE POLICY "Permitir todo en orders" ON public.orders FOR ALL USING (true) WI
 
 ---
 
-## 💾 3. Claves de Almacenamiento Local (`localStorage`)
+## 💾 3. Almacenamiento en el Dispositivo (solo excepciones aprobadas)
 
-En el modo local u offline, las claves utilizadas son:
+Supabase es la **única fuente de verdad** para productos, categorías, preventistas, configuración y pedidos. El navegador NO guarda datos del catálogo. Únicas excepciones en el dispositivo:
 
-| Clave | Contenido |
-|---|---|
-| `nutrimayorista_products_v1` | Array de productos con precios y stock |
-| `nutrimayorista_categories_v1` | Array de categorías y orden |
-| `nutrimayorista_preventistas_v1` | Array de preventistas y números de WhatsApp |
-| `nutrimayorista_settings_v1` | Objeto de configuración de empresa |
-| `nutrimayorista_orders_v1` | Array de pedidos históricos con códigos de 4 dígitos |
-| `nutrimayorista_admin_auth_v1` | Hash de la contraseña administrativa |
-| `nutrimayorista_admin_session_v1` | Estado booleano de la sesión actual |
-| `nutrimayorista_cart_v1` | Ítems actuales agregados al carrito |
-| `nutrimayorista_cart_timestamp_v1` | Timestamp para expiración del carrito a las 24 horas |
+| Clave | Dónde | Contenido |
+|---|---|---|
+| `mayorista360_cart_v1` | localStorage | Carrito en curso (borrador, expira a las 24 h) |
+| `mayorista360_cart_timestamp_v1` | localStorage | Timestamp de expiración del carrito |
+| `mayorista360_admin_session_v1` | sessionStorage | Sesión del admin mientras la pestaña esté abierta |
