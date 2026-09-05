@@ -11,7 +11,6 @@ import {
   Check,
   Package,
   Layers,
-  Sparkles,
   Filter
 } from 'lucide-react';
 
@@ -192,16 +191,6 @@ export const ProductManagement: React.FC = () => {
               Limpiar filtros
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Centralized Price Update Note */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>
-            <strong>Gestión Centralizada:</strong> Los precios, stock y nuevos productos se reflejan en tiempo real en los enlaces de catálogo de clientes y preventistas.
-          </span>
         </div>
       </div>
 
