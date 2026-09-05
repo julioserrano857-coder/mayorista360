@@ -44,7 +44,6 @@ export const ProductManagement: React.FC = () => {
       searchTerm === '' ||
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.brand && p.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
       p.weight.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCategory =
@@ -136,7 +135,7 @@ export const ProductManagement: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre, marca, presentación o SKU..."
+              placeholder="Buscar por nombre, marca o presentación..."
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500 transition-all"
             />
           </div>
@@ -284,11 +283,6 @@ export const ProductManagement: React.FC = () => {
                               </div>
                               <div className="text-[11px] text-slate-500 flex items-center gap-2">
                                 {product.brand && <span>{product.brand}</span>}
-                                {product.sku && (
-                                  <span className="font-mono text-slate-400">
-                                    SKU: {product.sku}
-                                  </span>
-                                )}
                               </div>
                             </div>
                           </div>

@@ -102,7 +102,6 @@ function MainApp() {
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
         product.weight.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Category filter

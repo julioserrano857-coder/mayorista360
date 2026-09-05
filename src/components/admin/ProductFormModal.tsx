@@ -45,7 +45,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onClose,
   productToEdit
 }) => {
-  const { categories, products, addProduct, updateProduct, addCategory } = useStore();
+  const { categories, addProduct, updateProduct, addCategory } = useStore();
 
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -55,7 +55,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [imageUrl, setImageUrl] = useState('');
   const [brand, setBrand] = useState('');
   const [description, setDescription] = useState('');
-  const [sku, setSku] = useState('');
 
   // Quick inline category creation if needed
   const [isCreatingQuickCat, setIsCreatingQuickCat] = useState(false);
@@ -67,18 +66,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [showAdvancedUrl, setShowAdvancedUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-generate next sequential SKU (e.g. ART-001, ART-002...) based on
-  // the highest numeric suffix already present in the catalog.
-  const getNextAutoSku = (): string => {
-    const maxNum = products.reduce((max, p) => {
-      const m = p.sku?.match(/(\d+)\s*$/);
-      if (!m) return max;
-      const n = parseInt(m[1], 10);
-      return Number.isFinite(n) && n > max ? n : max;
-    }, 0);
-    return `ART-${String(maxNum + 1).padStart(3, '0')}`;
-  };
 
   useEffect(() => {
     setUploadError(null);
@@ -96,7 +83,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setImageUrl(productToEdit.imageUrl || '');
       setBrand(productToEdit.brand || '');
       setDescription(productToEdit.description || '');
-      setSku(productToEdit.sku || getNextAutoSku());
       setShowAdvancedUrl(false);
     } else {
       setName('');
@@ -107,10 +93,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setImageUrl('');
       setBrand('');
       setDescription('');
-      setSku(getNextAutoSku());
       setShowAdvancedUrl(false);
     }
-  }, [productToEdit, categories, products, isOpen]);
+  }, [productToEdit, categories, isOpen]);
 
   // Handle Quick Category Create
   const handleCreateQuickCategory = (e: React.FormEvent) => {
@@ -193,8 +178,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       status,
       imageUrl: imageUrl.trim(),
       brand: brand.trim() || undefined,
-      description: description.trim() || undefined,
-      sku: sku.trim() || undefined
+      description: description.trim() || undefined
     };
 
     if (productToEdit) {
@@ -398,11 +382,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </div>
           </div>
 
-          {/* Row 3: Price, Stock, SKU */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Row 3: Price, Stock */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Precio Mayorista ($) <span className="text-rose-500">*</span>
+                Precio ($) <span className="text-rose-500">*</span>
               </label>
               <input
                 id="form-product-price"
@@ -429,23 +413,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <option value="Disponible">🟢 Disponible</option>
                 <option value="Sin Stock">🔴 Sin Stock</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Código SKU / Ref <span className="text-emerald-600 font-semibold">(automático)</span>
-              </label>
-              <input
-                id="form-product-sku"
-                type="text"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="Se genera solo (ej: ART-001)"
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:border-emerald-500"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Se asigna automáticamente al crear. Podés cambiarlo si querés.
-              </span>
             </div>
           </div>
 
