@@ -397,24 +397,12 @@ function MainApp() {
 
       {/* 5. Footer (minimal) */}
       <footer className="bg-white border-t border-slate-200 mt-auto py-5 px-4 sm:px-6 lg:px-8 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-400">
           <span className="font-extrabold text-slate-900">
             📦 {settings.companyName}
           </span>
-          {settings.defaultWhatsApp && (
-            <a
-              href={`https://wa.me/${settings.defaultWhatsApp}?text=${encodeURIComponent('Hola, tengo una consulta sobre el catálogo mayorista.')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-slate-600 hover:text-emerald-700 font-semibold"
-            >
-              <Phone className="w-3.5 h-3.5 text-emerald-600" />
-              +{settings.defaultWhatsApp}
-            </a>
-          )}
-          <span className="text-slate-400">
-            © {new Date().getFullYear()} {settings.companyName}
-          </span>
+          <span className="hidden sm:inline text-slate-300">·</span>
+          <span>© {new Date().getFullYear()}</span>
         </div>
       </footer>
 

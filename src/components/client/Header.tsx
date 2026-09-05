@@ -3,7 +3,6 @@ import { useStore } from '../../context/StoreContext';
 import {
   ShoppingBag,
   Search,
-  Phone,
   X,
   SlidersHorizontal
 } from 'lucide-react';
@@ -23,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   stockFilterOnly,
   onToggleStockFilter
 }) => {
-  const { settings, activePreventista, cartCount, cartTotal } = useStore();
+  const { settings, cartCount, cartTotal } = useStore();
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -42,44 +41,9 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-bold text-xl ring-2 ring-white shrink-0">
               📦
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-extrabold text-base sm:text-xl text-slate-900 tracking-tight leading-none truncate">
-                  {settings.companyName}
-                </span>
-                <span className="inline-flex items-center px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-extrabold bg-amber-500/10 text-amber-700 border border-amber-200 uppercase tracking-wider shrink-0">
-                  Mayorista
-                </span>
-              </div>
-
-              {/* Compact & Always Visible Preventista Indicator */}
-              <div className="mt-1 flex items-center">
-                {activePreventista ? (
-                  <span
-                    id="header-preventista-badge"
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200/90 text-emerald-900 text-[11px] shadow-2xs"
-                    title={`Preventista asignado: ${activePreventista.name} (+${activePreventista.whatsapp})`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="font-medium text-emerald-700">Preventista:</span>
-                    <strong className="font-black text-emerald-950 truncate max-w-[140px] sm:max-w-none">
-                      {activePreventista.name}
-                    </strong>
-                  </span>
-                ) : (
-                  <span
-                    id="header-preventista-badge"
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 text-[11px]"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
-                    <span className="text-slate-500">Atención:</span>
-                    <strong className="font-bold text-slate-900 truncate max-w-[140px] sm:max-w-none">
-                      {settings.companyName || 'Ventas Central'}
-                    </strong>
-                  </span>
-                )}
-              </div>
-            </div>
+            <span className="font-extrabold text-base sm:text-xl text-slate-900 tracking-tight leading-none truncate min-w-0">
+              {settings.companyName}
+            </span>
           </div>
 
           {/* Search Bar - Desktop */}
@@ -108,14 +72,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Direct WhatsApp info */}
-            {activePreventista && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-mono">
-                <Phone className="w-3 h-3 text-emerald-600" />
-                <span>+{activePreventista.whatsapp}</span>
-              </div>
-            )}
-
             {/* In-Stock Filter Toggle */}
             <button
               id="btn-filter-stock-only"
