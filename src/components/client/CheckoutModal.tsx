@@ -31,7 +31,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 }) => {
   const { cart, settings, activePreventista, clearCart, addOrder } = useStore();
 
-  const [clientName, setClientName] = useState('');
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -82,7 +81,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     // 1. Guardar el pedido en el sistema / base de datos Supabase
     const savedOrder = addOrder({
-      clientName: clientName.trim() || undefined,
       notes: notes.trim() || undefined,
       items: cart,
       preventistaId: activePreventista?.id,
@@ -132,7 +130,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleFinishAndClear = () => {
     clearCart();
-    setClientName('');
     setNotes('');
     setIsSubmitted(false);
     setIsSubmitting(false);
@@ -324,21 +321,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Client / Business Name (Optional) */}
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Tu nombre o Nombre de tu comercio (opcional)
-              </label>
-              <input
-                id="input-order-client-name"
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Ej: Almacén El Centro / Juan Pérez"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-base sm:text-xs text-slate-900 focus:outline-none focus:border-emerald-600 transition-all placeholder:text-slate-400"
-              />
             </div>
 
             {/* Campo opcional de Nota o Aclaración */}
