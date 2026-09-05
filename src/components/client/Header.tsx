@@ -8,8 +8,6 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/whatsapp';
-import { PWAInstallButton } from '../common/PWAInstallButton';
-
 interface HeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -134,9 +132,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Solo disponibles</span>
               <span className="sm:hidden">En stock</span>
             </button>
-
-            {/* PWA Install Button */}
-            <PWAInstallButton variant="header" label="Instalar App" />
 
             {/* Cart Button */}
             <button

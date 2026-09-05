@@ -5,7 +5,6 @@ import { ProductManagement } from './ProductManagement';
 import { CategoryManagement } from './CategoryManagement';
 import { PreventistaManagement } from './PreventistaManagement';
 import { SettingsManagement } from './SettingsManagement';
-import { PWAInstallButton } from '../common/PWAInstallButton';
 import {
   PackageCheck,
   Package,
@@ -78,8 +77,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToLanding })
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <PWAInstallButton variant="header" label="Instalar App / Panel" />
-
               <button
                 id="btn-admin-logout"
                 onClick={handleLogout}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { PWAInstallButton } from '../common/PWAInstallButton';
 import {
   Lock,
   ArrowRight,
@@ -228,11 +227,6 @@ export const LandingPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </form>
           )}
 
-        </div>
-
-        {/* PWA Install Button */}
-        <div className="mt-4 flex justify-center">
-          <PWAInstallButton variant="subtle" label="Instalar Aplicación en este Dispositivo" />
         </div>
 
         {/* Subtle Security Badge */}
