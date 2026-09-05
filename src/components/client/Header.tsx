@@ -38,16 +38,16 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
           {/* Logo & Brand (Client Pure View) */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-bold text-xl ring-2 ring-white">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-bold text-xl ring-2 ring-white shrink-0">
               📦
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base sm:text-xl text-slate-900 tracking-tight leading-none">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-extrabold text-base sm:text-xl text-slate-900 tracking-tight leading-none truncate">
                   {settings.companyName}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-extrabold bg-amber-500/10 text-amber-700 border border-amber-200 uppercase tracking-wider">
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-extrabold bg-amber-500/10 text-amber-700 border border-amber-200 uppercase tracking-wider shrink-0">
                   Mayorista
                 </span>
               </div>
