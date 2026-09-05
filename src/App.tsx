@@ -43,6 +43,10 @@ function MainApp() {
       if (search.includes('view=pedidos') || search.includes('ref=') || search.includes('catalogo') || search.includes('pedido') || search.includes('cliente')) {
         return 'catalog';
       }
+      // Sesión de administrador válida -> volver directo al panel al recargar (sin pasar por login)
+      if (isAdminAuthenticated) {
+        return 'admin';
+      }
     }
     return 'landing';
   });
